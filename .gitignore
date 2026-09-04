@@ -1,0 +1,23 @@
+# ---- 依赖与构建 ----
+node_modules/
+dist/
+web/dist/
+
+# ---- 运行时数据 / 隐私(严禁提交) ----
+# 服务运行时的 JSON 存储(settings/hosts/AI key/监控数据)与知识库文本缓存均在此
+server/src/data/
+.runtmp/
+
+# ---- 环境与日志 ----
+.env
+.env.*
+*.log
+nohup.out
+*.pid
+
+# ---- 系统与编辑器 ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,56 @@
+{
+  "name": "轸宿智汇平台 · 算法题库",
+  "source": "分类体系参考《代码随想录》，题目均为力扣(LeetCode)原题，供在线编程练习",
+  "updated": "2026-09-04",
+  "extend": "新增题目：在 problems/ 下放入 <id>.md，并在 index.json 的 problems 数组追加一条记录即可（md 中 <!-- @题解 --> 之后为题解部分，前端默认隐藏，可自行选择查看）",
+  "problems": [
+    { "id": "binary-search", "no": 704, "title": "二分查找", "category": "数组", "difficulty": "简单", "tags": ["二分"], "time": "O(log n)", "space": "O(1)", "langs": ["cpp", "python"] },
+    { "id": "remove-element", "no": 27, "title": "移除元素", "category": "数组", "difficulty": "简单", "tags": ["双指针"], "time": "O(n)", "space": "O(1)", "langs": ["cpp", "python"] },
+    { "id": "min-subarray-len", "no": 209, "title": "长度最小的子数组", "category": "数组", "difficulty": "中等", "tags": ["滑动窗口", "前缀和"], "time": "O(n)", "space": "O(1)", "langs": ["cpp", "python"] },
+    { "id": "spiral-matrix-2", "no": 59, "title": "螺旋矩阵 II", "category": "数组", "difficulty": "中等", "tags": ["模拟", "矩阵"], "time": "O(n²)", "space": "O(n²)", "langs": ["cpp", "python"] },
+
+    { "id": "reverse-linked-list", "no": 206, "title": "反转链表", "category": "链表", "difficulty": "简单", "tags": ["迭代", "递归"], "time": "O(n)", "space": "O(1)", "langs": ["cpp", "python"] },
+    { "id": "linked-list-cycle-2", "no": 142, "title": "环形链表 II", "category": "链表", "difficulty": "中等", "tags": ["快慢指针", "数学"], "time": "O(n)", "space": "O(1)", "langs": ["cpp", "python"] },
+    { "id": "remove-nth-from-end", "no": 19, "title": "删除链表的倒数第 N 个结点", "category": "链表", "difficulty": "中等", "tags": ["双指针"], "time": "O(n)", "space": "O(1)", "langs": ["cpp", "python"] },
+
+    { "id": "two-sum", "no": 1, "title": "两数之和", "category": "哈希表", "difficulty": "简单", "tags": ["哈希"], "time": "O(n)", "space": "O(n)", "langs": ["cpp", "python"] },
+    { "id": "three-sum", "no": 15, "title": "三数之和", "category": "哈希表", "difficulty": "中等", "tags": ["双指针", "排序"], "time": "O(n²)", "space": "O(1)", "langs": ["cpp", "python"] },
+    { "id": "four-sum-2", "no": 454, "title": "四数相加 II", "category": "哈希表", "difficulty": "中等", "tags": ["哈希", "分组"], "time": "O(n²)", "space": "O(n²)", "langs": ["cpp", "python"] },
+
+    { "id": "reverse-string", "no": 344, "title": "反转字符串", "category": "字符串", "difficulty": "简单", "tags": ["双指针"], "time": "O(n)", "space": "O(1)", "langs": ["cpp", "python"] },
+    { "id": "find-substring-kmp", "no": 28, "title": "找出字符串中第一个匹配项的下标(strStr/KMP)", "category": "字符串", "difficulty": "简单", "tags": ["KMP"], "time": "O(n+m)", "space": "O(m)", "langs": ["cpp", "python"] },
+
+    { "id": "valid-parentheses", "no": 20, "title": "有效的括号", "category": "栈与队列", "difficulty": "简单", "tags": ["栈"], "time": "O(n)", "space": "O(n)", "langs": ["cpp", "python"] },
+    { "id": "eval-rpn", "no": 150, "title": "逆波兰表达式求值", "category": "栈与队列", "difficulty": "中等", "tags": ["栈"], "time": "O(n)", "space": "O(n)", "langs": ["cpp", "python"] },
+    { "id": "sliding-window-max", "no": 239, "title": "滑动窗口最大值", "category": "栈与队列", "difficulty": "困难", "tags": ["单调队列"], "time": "O(n)", "space": "O(k)", "langs": ["cpp", "python"] },
+
+    { "id": "invert-binary-tree", "no": 226, "title": "翻转二叉树", "category": "二叉树", "difficulty": "简单", "tags": ["递归", "遍历"], "time": "O(n)", "space": "O(h)", "langs": ["cpp", "python"] },
+    { "id": "symmetric-tree", "no": 101, "title": "对称二叉树", "category": "二叉树", "difficulty": "简单", "tags": ["递归", "双端"], "time": "O(n)", "space": "O(h)", "langs": ["cpp", "python"] },
+    { "id": "validate-bst", "no": 98, "title": "验证二叉搜索树", "category": "二叉树", "difficulty": "中等", "tags": ["BST", "中序遍历"], "time": "O(n)", "space": "O(h)", "langs": ["cpp", "python"] },
+
+    { "id": "combinations", "no": 77, "title": "组合", "category": "回溯", "difficulty": "中等", "tags": ["回溯", "剪枝"], "time": "O(C(n,k))", "space": "O(k)", "langs": ["cpp", "python"] },
+    { "id": "permutations", "no": 46, "title": "全排列", "category": "回溯", "difficulty": "中等", "tags": ["回溯", "used数组"], "time": "O(n·n!)", "space": "O(n)", "langs": ["cpp", "python"] },
+    { "id": "n-queens", "no": 51, "title": "N 皇后", "category": "回溯", "difficulty": "困难", "tags": ["回溯", "棋盘"], "time": "O(n!)", "space": "O(n)", "langs": ["cpp", "python"] },
+
+    { "id": "assign-cookies", "no": 455, "title": "分发饼干", "category": "贪心", "difficulty": "简单", "tags": ["贪心", "排序"], "time": "O(n log n)", "space": "O(1)", "langs": ["cpp", "python"] },
+    { "id": "jump-game", "no": 55, "title": "跳跃游戏", "category": "贪心", "difficulty": "中等", "tags": ["贪心", "覆盖区间"], "time": "O(n)", "space": "O(1)", "langs": ["cpp", "python"] },
+    { "id": "gas-station", "no": 134, "title": "加油站", "category": "贪心", "difficulty": "中等", "tags": ["贪心", "环形"], "time": "O(n)", "space": "O(1)", "langs": ["cpp", "python"] },
+
+    { "id": "climbing-stairs", "no": 70, "title": "爬楼梯", "category": "动态规划", "difficulty": "简单", "tags": ["DP"], "time": "O(n)", "space": "O(1)", "langs": ["cpp", "python"] },
+    { "id": "unique-paths", "no": 62, "title": "不同路径", "category": "动态规划", "difficulty": "中等", "tags": ["DP", "组合数"], "time": "O(m·n)", "space": "O(n)", "langs": ["cpp", "python"] },
+    { "id": "partition-equal-subset-sum", "no": 416, "title": "分割等和子集（0-1 背包）", "category": "动态规划", "difficulty": "中等", "tags": ["01背包"], "time": "O(n·sum)", "space": "O(sum)", "langs": ["cpp", "python"] },
+    { "id": "coin-change", "no": 322, "title": "零钱兑换（完全背包）", "category": "动态规划", "difficulty": "中等", "tags": ["完全背包", "BFS"], "time": "O(n·amount)", "space": "O(amount)", "langs": ["cpp", "python"] },
+    { "id": "longest-increasing-subsequence", "no": 300, "title": "最长递增子序列", "category": "动态规划", "difficulty": "中等", "tags": ["LIS", "二分"], "time": "O(n log n)", "space": "O(n)", "langs": ["cpp", "python"] },
+
+    { "id": "daily-temperatures", "no": 739, "title": "每日温度", "category": "单调栈", "difficulty": "中等", "tags": ["单调栈"], "time": "O(n)", "space": "O(n)", "langs": ["cpp", "python"] },
+    { "id": "trapping-rain-water", "no": 42, "title": "接雨水", "category": "单调栈", "difficulty": "困难", "tags": ["单调栈", "双指针"], "time": "O(n)", "space": "O(n)", "langs": ["cpp", "python"] },
+
+    { "id": "number-of-islands", "no": 200, "title": "岛屿数量", "category": "图论", "difficulty": "中等", "tags": ["DFS", "BFS", "连通分量"], "time": "O(m·n)", "space": "O(m·n)", "langs": ["cpp", "python"] },
+    { "id": "course-schedule", "no": 207, "title": "课程表（拓扑排序）", "category": "图论", "difficulty": "中等", "tags": ["拓扑", "环检测"], "time": "O(V+E)", "space": "O(V+E)", "langs": ["cpp", "python"] },
+    { "id": "network-delay-time", "no": 743, "title": "网络延迟时间（Dijkstra）", "category": "图论", "difficulty": "中等", "tags": ["最短路"], "time": "O(E log V)", "space": "O(V+E)", "langs": ["cpp", "python"] },
+    { "id": "redundant-connection", "no": 684, "title": "冗余连接（并查集）", "category": "图论", "difficulty": "中等", "tags": ["并查集"], "time": "O(n·α(n))", "space": "O(n)", "langs": ["cpp", "python"] },
+
+    { "id": "sorting-quick-merge", "no": 0, "title": "排序专题：快速排序 + 归并排序", "category": "排序", "difficulty": "中等", "tags": ["排序", "分治"], "time": "O(n log n)", "space": "O(log n)", "langs": ["cpp", "python"] },
+    { "id": "single-number", "no": 136, "title": "只出现一次的数字", "category": "位运算", "difficulty": "简单", "tags": ["异或"], "time": "O(n)", "space": "O(1)", "langs": ["cpp", "python"] }
+  ]
+}
