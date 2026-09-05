@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { Layout, Menu, theme, Avatar, Space, Typography, Badge, Tooltip, Button } from 'antd';
+import { Component, useEffect, useState } from 'react';
+import { Layout, Menu, theme, Avatar, Space, Typography, Badge, Tooltip, Button, Result, Spin, Input, Card, Alert } from 'antd';
 import {
   DashboardOutlined, RobotOutlined, CloudServerOutlined, ContainerOutlined,
   ClusterOutlined, ControlOutlined, CodeOutlined, ToolOutlined, MessageOutlined, RocketOutlined,
-  MonitorOutlined, BellOutlined, ApiOutlined, DatabaseOutlined, BookOutlined,
+  MonitorOutlined, BellOutlined, ApiOutlined, DatabaseOutlined, BookOutlined, SafetyCertificateOutlined,
+  FolderOpenOutlined, HistoryOutlined, GlobalOutlined, FireOutlined, CloudDownloadOutlined, FileSearchOutlined,
 } from '@ant-design/icons';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
@@ -20,10 +21,69 @@ import KnowledgeBase from './pages/KnowledgeBase';
 import Code from './pages/Code';
 import ProblemsPage from './pages/ProblemsPage';
 import SolvePage from './pages/Solve';
+import SecurityPage from './pages/SecurityPage';
+import FilesPage from './pages/FilesPage';
+import TaskCenter from './pages/TaskCenter';
+import Websites from './pages/Websites';
+import Firewall from './pages/Firewall';
+import BackupCenter from './pages/BackupCenter';
+import WebLogs from './pages/WebLogs';
+import SystemCenter from './pages/SystemCenter';
+import DatabaseCenter from './pages/DatabaseCenter';
 
 const { Sider, Header, Content } = Layout;
 
-const MENU = [
+// 登录页(启用登录保护后展示)
+function LoginScreen({ onOk }: { onOk: () => void }) {
+  const [pwd, setPwd] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+  return (
+    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#eef2ff,#f9f0ff)' }}>
+      <Card style={{ width: 380 }}>
+        <Space direction="vertical" style={{ width: '100%' }} size={12}>
+          <div style={{ textAlign: 'center' }}><ApiOutlined style={{ fontSize: 30, color: '#4f8cff' }} /><div style={{ fontSize: 20, fontWeight: 700, marginTop: 6 }}>轸宿智汇平台</div></div>
+          <Alert type="warning" showIcon message="已启用登录保护,请输入口令进入" />
+          {err && <Alert type="error" showIcon message={err} />}
+          <Input.Password placeholder="管理员口令" value={pwd} onChange={(e) => setPwd(e.target.value)}
+            onPressEnter={async () => {
+              setBusy(true); setErr('');
+              try {
+                const r = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pwd }) });
+                const j = await r.json();
+                if (r.ok) onOk(); else setErr(j?.error || '登录失败');
+              } catch (e: any) { setErr(String(e?.message || e)); }
+              setBusy(false);
+            }} />
+          <Button type="primary" block loading={busy} onClick={async () => {
+            setBusy(true); setErr('');
+            try {
+              const r = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pwd }) });
+              const j = await r.json();
+              if (r.ok) onOk(); else setErr(j?.error || '登录失败');
+            } catch (e: any) { setErr(String(e?.message || e)); }
+            setBusy(false);
+          }}>登 录</Button>
+        </Space>
+      </Card>
+    </div>
+  );
+}
+
+// 全局错误边界:页面运行时异常时给出提示,而不是白屏
+class ErrBoundary extends Component<any, { err: any }> {
+  state = { err: null };
+  static getDerivedStateFromError(err: any) { return { err }; }
+  render() {
+    if (this.state.err) {
+      return <Result status="error" title="页面出现异常(非白屏提示)" subTitle={String(this.state.err?.message || this.state.err)}
+        extra={<Button type="primary" onClick={() => { this.setState({ err: null }); }}>重试</Button>} />;
+    }
+    return this.props.children;
+  }
+}
+
+const MENU: any[] = [
   { key: '/', icon: <DashboardOutlined />, label: '总览 Dashboard' },
   { key: '/agents', icon: <RobotOutlined />, label: 'Agent 管理' },
   { key: '/hosts', icon: <CloudServerOutlined />, label: '宿主机 / VM' },
@@ -31,12 +91,21 @@ const MENU = [
   { key: '/k8s', icon: <ClusterOutlined />, label: 'Kubernetes' },
   { key: '/linux', icon: <ControlOutlined />, label: 'Linux 管理' },
   { key: '/tools', icon: <ToolOutlined />, label: '中间件 / 工具库' },
+  { key: '/database', icon: <DatabaseOutlined />, label: '数据库中心' },
+  { key: '/sec', icon: <SafetyCertificateOutlined />, label: '网络安全' },
+  { key: '/files', icon: <FolderOpenOutlined />, label: '文件管理' },
+  { key: '/websites', icon: <GlobalOutlined />, label: '网站管理' },
+  { key: '/firewall', icon: <FireOutlined />, label: '防火墙' },
+  { key: '/backup', icon: <CloudDownloadOutlined />, label: '备份中心' },
+  { key: '/weblog', icon: <FileSearchOutlined />, label: '访问日志' },
+  { key: '/tasks', icon: <HistoryOutlined />, label: '任务中心' },
   { key: '/devops', icon: <RocketOutlined />, label: 'DevOps 流水线' },
   { key: '/code', icon: <CodeOutlined />, label: '在线编程' },
   { key: '/problems', icon: <BookOutlined />, label: '题库刷题' },
   { key: '/kb', icon: <DatabaseOutlined />, label: '知识库 RAG' },
   { key: '/monitoring', icon: <MonitorOutlined />, label: '监控 / 告警' },
   { key: '/ai', icon: <MessageOutlined />, label: 'AI 智能运维' },
+  { key: '/system', icon: <ApiOutlined />, label: '系统(审计/API/登录)' },
 ];
 
 export default function App() {
@@ -45,6 +114,20 @@ export default function App() {
   const [col, setCol] = useState(false);
   const { token } = theme.useToken();
   const sel = loc.pathname.startsWith('/solve') ? '/problems' : '/' + (loc.pathname.split('/')[1] || '');
+
+  // 登录保护探测
+  const [auth, setAuth] = useState<'loading' | 'open' | 'ok' | 'need'>('loading');
+  useEffect(() => {
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then((r) => {
+        if (r.status === 401) { setAuth('need'); return; }
+        return r.json().then((j: any) => setAuth(j && j.open !== false ? 'open' : 'ok')).catch(() => setAuth('open'));
+      })
+      .catch(() => setAuth('open'));
+  }, []);
+  if (auth === 'loading') return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin size="large" tip="载入中" /></div>;
+  if (auth === 'need') return <LoginScreen onOk={() => window.location.reload()} />;
+
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -72,6 +155,7 @@ export default function App() {
           </Space>
         </Header>
         <Content style={{ margin: 16, padding: 8 }}>
+          <ErrBoundary>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/agents" element={<Agents />} />
@@ -80,6 +164,14 @@ export default function App() {
             <Route path="/k8s" element={<K8s />} />
             <Route path="/linux" element={<LinuxManage />} />
             <Route path="/tools" element={<Tools />} />
+            <Route path="/database" element={<DatabaseCenter />} />
+            <Route path="/sec" element={<SecurityPage />} />
+            <Route path="/files" element={<FilesPage />} />
+            <Route path="/websites" element={<Websites />} />
+            <Route path="/firewall" element={<Firewall />} />
+            <Route path="/backup" element={<BackupCenter />} />
+            <Route path="/weblog" element={<WebLogs />} />
+            <Route path="/tasks" element={<TaskCenter />} />
             <Route path="/devops" element={<DevOps />} />
             <Route path="/monitoring" element={<Monitoring />} />
             <Route path="/code" element={<Code />} />
@@ -87,7 +179,9 @@ export default function App() {
             <Route path="/solve/:id" element={<SolvePage />} />
             <Route path="/kb" element={<KnowledgeBase />} />
             <Route path="/ai" element={<AIChat />} />
+            <Route path="/system" element={<SystemCenter />} />
           </Routes>
+          </ErrBoundary>
         </Content>
       </Layout>
     </Layout>

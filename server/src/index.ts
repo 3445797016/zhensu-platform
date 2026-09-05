@@ -19,6 +19,18 @@ import { register as linux } from './routes/linux.js';
 import { register as code } from './routes/code.js';
 import { register as kb } from './routes/kb.js';
 import { register as problems } from './routes/problems.js';
+import { register as sec } from './routes/sec.js';
+import { register as files } from './routes/files.js';
+import { register as auth } from './routes/auth.js';
+import { register as admin } from './routes/admin.js';
+import { register as websites } from './routes/websites.js';
+import { register as firewall } from './routes/firewall.js';
+import { register as backup } from './routes/backup.js';
+import { register as weblog } from './routes/weblog.js';
+import { register as database } from './routes/database.js';
+import { register as targets } from './routes/targets.js';
+import { register as seclab } from './routes/seclab.js';
+import { register as tasksApi } from './modules/tasks.js';
 import { store } from './lib/store.js';
 
 // 确保本机默认可作为被纳管的 Linux 主机
@@ -34,7 +46,19 @@ app.get('/api/health', async () => ({
   status: 'ok', uptime: process.uptime(), time: new Date().toISOString(),
 }));
 
-for (const m of [hosts, docker, tools, agents, k8s, ai, devops, monitoring, ops, linux, code, kb, problems]) await app.register(m, { prefix: '/api' });
+// 登录守卫(可选):开启安全后,除 /api/auth/*、/api/open/*、/api/health 外都需会话 cookie
+app.addHook('onRequest', (req, reply, done) => {
+  const secCfg = store.read<any>('security', {});
+  const u = req.url || '';
+  if (!secCfg.enabled || !u.startsWith('/api')) return done();
+  if (u.startsWith('/api/auth/') || u.startsWith('/api/open/') || u === '/api/health' || req.method === 'OPTIONS') return done();
+  const m = String(req.headers.cookie || '').match(/zs_sess=([^;]+)/);
+  const tok = m ? decodeURIComponent(m[1]) : '';
+  if (tok && secCfg.sessions?.[tok]) return done();
+  reply.code(401).send({ error: '未登录' });
+});
+
+for (const m of [hosts, docker, tools, agents, k8s, ai, devops, monitoring, ops, linux, code, kb, problems, sec, files, auth, admin, websites, firewall, backup, weblog, database, targets, seclab, tasksApi]) await app.register(m, { prefix: '/api' });
 
 // 托管前端构建产物（存在则提供）
 const webDist = join(__dirname, '..', '..', 'web', 'dist');

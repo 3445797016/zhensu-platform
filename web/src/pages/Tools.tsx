@@ -3,8 +3,8 @@ import { Select, Button, Space, Tag, Card, Row, Col, Spin, App, Drawer, Descript
 import { ReloadOutlined, ScanOutlined, RocketOutlined, DeleteOutlined, SettingOutlined, FileTextOutlined, PauseCircleOutlined, PlayCircleOutlined, ExperimentOutlined } from '@ant-design/icons';
 import { api } from '../api';
 
-const CAT_LABEL: any = { observability: '可观测性', data: '数据存储', messaging: '消息队列', cache: '缓存', gateway: '网关', container: '容器管理', monitor: '监控', storage: '存储', devops: 'DevOps' };
-const CAT_COLOR: any = { observability: 'geekblue', data: 'green', messaging: 'purple', cache: 'volcano', gateway: 'cyan', container: 'blue', monitor: 'magenta', storage: 'orange', devops: 'gold' };
+const CAT_LABEL: any = { observability: '可观测性', data: '数据存储', messaging: '消息队列', cache: '缓存', gateway: '网关', container: '容器管理', monitor: '监控', storage: '存储', devops: 'DevOps', security: '渗透测试' };
+const CAT_COLOR: any = { observability: 'geekblue', data: 'green', messaging: 'purple', cache: 'volcano', gateway: 'cyan', container: 'blue', monitor: 'magenta', storage: 'orange', devops: 'gold', security: 'red' };
 
 export default function Tools() {
   const [catalog, setCatalog] = useState<any>(null);
