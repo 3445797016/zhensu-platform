@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdirSync, writeFileSync, existsSync, readdirSync, chmodSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { store, DATA_DIR } from '../lib/store.js';
+import { dec } from '../lib/secure.js';
 import { audit } from '../lib/audit.js';
 import { notify } from './notify.js';
 import type { Host } from '../lib/host.js';
@@ -52,11 +53,11 @@ export function buildInventory(): string {
       let l = `${name} ansible_host=${h.host} ansible_port=${h.port || 22} ansible_user=${h.user || 'root'}`;
       if (h.authType === 'key' && h.privateKey) {
         const kf = join(KEY_DIR, name + '.pem');
-        if (!existsSync(kf)) writeFileSync(kf, h.privateKey, { mode: 0o600 });
+        if (!existsSync(kf)) writeFileSync(kf, dec(h.privateKey), { mode: 0o600 });
         chmodSync(kf, 0o600);
         l += ` ansible_ssh_private_key_file=${kf}`;
       } else {
-        l += ` ansible_ssh_pass=${String(h.password || '')}`;
+        l += ` ansible_ssh_pass=${String(dec(h.password) || '')}`;
       }
       out.push(l);
     }

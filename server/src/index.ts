@@ -39,9 +39,11 @@ import { sessionUser } from './routes/auth.js';
 import { register as notify } from './routes/notify.js';
 import { register as report } from './routes/report.js';
 import { store } from './lib/store.js';
+import { encryptAll } from './lib/secure.js';
 
 // 确保本机默认可作为被纳管的 Linux 主机
 store.upsert('hosts', { id: 'local', name: '本机(Linux)', kind: 'local', tags: ['core'], createdAt: new Date().toISOString() });
+encryptAll();   // 启动时把明文凭据原地加密(幂等)
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = Fastify({ logger: { level: process.env.LOG || 'info' }, bodyLimit: 100 * 1024 * 1024 });

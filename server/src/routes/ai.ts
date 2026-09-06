@@ -5,6 +5,7 @@ import { Host, run, describeHost } from '../lib/host.js';
 import { defaultProviders, chat, Provider } from '../lib/llm.js';
 import { TOOLS } from '../modules/tools.js';
 import { audit } from '../lib/audit.js';
+import { enc, dec } from '../lib/secure.js';
 
 const sysPrompt = `你是一个能力全面、善于深度思考的 AI 助手（运维 + 通用）。
 
@@ -91,7 +92,7 @@ export async function register(fastify: FastifyInstance) {
     const ovs = cfg.providers || {};
     return defaultProviders().map((def) => {
       const ov = ovs[def.id] || {};
-      return { def: { ...def, baseURL: ov.baseURL || def.baseURL, defaultModel: ov.model || def.defaultModel }, apiKey: ov.apiKey || def.apiKey };
+      return { def: { ...def, baseURL: ov.baseURL || def.baseURL, defaultModel: ov.model || def.defaultModel }, apiKey: dec(ov.apiKey) || ov.apiKey || def.apiKey };
     });
   }
 
@@ -113,7 +114,7 @@ export async function register(fastify: FastifyInstance) {
         id, name: ov.name || id,
         baseURL: ov.baseURL, defaultModel: model,
         models: Array.isArray(ov.models) && ov.models.length ? ov.models : [model],
-        configured: !!ov.apiKey, custom: true,
+        configured: !!dec(ov.apiKey), custom: true,
       });
     }
     const selId = cfg.selected?.id;
@@ -142,7 +143,7 @@ export async function register(fastify: FastifyInstance) {
     if (baseURL !== undefined) ov.baseURL = String(baseURL || '').trim() || undefined;
     if (name !== undefined) ov.name = String(name || '').trim() || undefined;
     if (Array.isArray(models) && models.length) ov.models = models.map(String);
-    if (apiKey && apiKey !== '***') ov.apiKey = apiKey;
+    if (apiKey && apiKey !== '***') ov.apiKey = enc(apiKey) as string;
     else if (apiKey === '') delete ov.apiKey;                 // 显式空串=清除 key
     if (isCustom && !ov.baseURL) return reply.code(400).send({ error: '自定义提供商必须填写 API 地址(baseURL)' });
     if (!ov.model && ov.models?.length) ov.model = ov.models[0];

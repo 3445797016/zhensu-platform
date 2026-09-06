@@ -4,6 +4,7 @@
 import { exec as cpExec, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { Client } from 'ssh2';
+import { dec } from './secure.js';
 
 const execAsync = promisify(cpExec);
 
@@ -42,8 +43,8 @@ export async function run(h: Host, cmd: string, timeoutMs = 120000): Promise<{ c
   return new Promise((resolve) => {
     const conn = new Client();
     const cfg: any = { host: h.host, port: h.port || 22, username: h.user, readyTimeout: 15000 };
-    if (h.authType === 'key' && h.privateKey) cfg.privateKey = h.privateKey;
-    else cfg.password = h.password;
+    if (h.authType === 'key' && h.privateKey) cfg.privateKey = dec(h.privateKey);
+    else cfg.password = dec(h.password);
     const timer = setTimeout(() => { conn.end(); resolve({ code: -1, stdout: '', stderr: 'SSH 连接超时' }); }, 30000);
     conn.on('ready', () => {
       conn.exec(cmd, { pty: true }, (err, stream) => {
@@ -86,8 +87,8 @@ export function openShell(h: Host, onData: (s: string) => void, onClose: () => v
   }
   const conn = new Client();
   const cfg: any = { host: h.host, port: h.port || 22, username: h.user };
-  if (h.authType === 'key' && h.privateKey) cfg.privateKey = h.privateKey;
-  else cfg.password = h.password;
+  if (h.authType === 'key' && h.privateKey) cfg.privateKey = dec(h.privateKey);
+  else cfg.password = dec(h.password);
   let shellStream: any = null;
   conn.on('ready', () => conn.shell({ term: 'xterm-256color' }, (err, stream) => {
     if (err) { onClose(); return; }

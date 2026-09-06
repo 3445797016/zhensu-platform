@@ -2,6 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { store } from '../lib/store.js';
+import { enc, dec } from '../lib/secure.js';
 import { Host, run, ping, openShell, describeHost } from '../lib/host.js';
 
 function toHost(body: any): Host {
@@ -21,27 +22,32 @@ export async function register(fastify: FastifyInstance) {
   const list = () => store.list<Host>(NS);
   const find = (id: string) => list().find((h) => h.id === id);
 
-  fastify.get('/hosts', () => list());
+  const plain = (h: Host) => ({ ...h, password: h.password ? dec(h.password) : h.password, privateKey: h.privateKey ? dec(h.privateKey) : h.privateKey });
+  fastify.get('/hosts', () => list().map(plain));
 
   fastify.get('/hosts/:id', (req) => {
     const h = find((req.params as any).id);
     if (!h) return { code: 404, error: 'not found' };
-    return h;
+    return plain(h);
   });
 
   fastify.post('/hosts', (req) => {
     const h = toHost((req.body as any).data ?? req.body as any);
+    if (h.password) h.password = enc(h.password) as string;
+    if (h.privateKey) h.privateKey = enc(h.privateKey) as string;
     store.upsert(NS, h);
-    return h;
+    return plain(h);
   });
 
   fastify.put('/hosts/:id', (req) => {
     const body = req.body as any;
     const old = find((req.params as any).id);
     if (!old) return { code: 404, error: 'not found' };
-    const merged = toHost({ ...old, ...(body.data ?? body), id: old.id });
+    const merged = toHost({ ...plain(old), ...(body.data ?? body), id: old.id });
+    if (merged.password) merged.password = enc(merged.password) as string;
+    if (merged.privateKey) merged.privateKey = enc(merged.privateKey) as string;
     store.upsert(NS, merged);
-    return merged;
+    return plain(merged);
   });
 
   fastify.delete('/hosts/:id', (req) => {

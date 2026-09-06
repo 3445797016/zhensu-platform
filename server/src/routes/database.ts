@@ -4,6 +4,7 @@
 import { execSync } from 'node:child_process';
 import type { FastifyInstance } from 'fastify';
 import { store } from '../lib/store.js';
+import { enc, dec } from '../lib/secure.js';
 import { audit } from '../lib/audit.js';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -56,6 +57,7 @@ function parseTab(text: string): { columns: string[]; rows: string[][] } {
 
 // ============ 引擎执行 ============
 function sqlExec(c: DbConn, query: string): { columns: string[]; rows: string[][] } {
+  c = { ...c, password: c.password ? dec(c.password) : '' };
   const db = c.database ? q(c.database) : '';
   switch (c.type) {
     case 'mysql': {
@@ -93,6 +95,7 @@ function sqlExec(c: DbConn, query: string): { columns: string[]; rows: string[][
 }
 
 function redisExec(c: DbConn, query: string): { text: string } {
+  c = { ...c, password: c.password ? dec(c.password) : '' };
   const qs = String(query);
   if (/[;&|$`><\n]/.test(qs)) throw new Error('命令含非法字符(不支持 ; & | $ ` > <)');
   const cmd = `${prefixE(c, 'redis-cli')} redis-cli ${c.host ? '-h ' + c.host : ''} ${c.port ? '-p ' + c.port : ''} ${c.password ? '-a ' + q(c.password) : ''} ${c.database ? '-n ' + c.database : ''} --raw ${qs}`;
@@ -101,6 +104,7 @@ function redisExec(c: DbConn, query: string): { text: string } {
 }
 
 function mongoExec(c: DbConn, js: string): any {
+  c = { ...c, password: c.password ? dec(c.password) : '' };
   const url = `mongodb://${c.user ? encodeURIComponent(c.user) + (c.password ? ':' + encodeURIComponent(c.password) : '') + '@' : ''}${c.host || '127.0.0.1'}:${c.port || 27017}/${c.database || 'admin'}`;
   const pre = containerPrefix(c, DB_TYPES.mongodb.hints);
   if (!pre && !haveLocal('mongosh')) throw new Error('找不到 mongosh,请指定含 mongosh 的 mongo 容器');
@@ -207,7 +211,8 @@ export async function register(fastify: FastifyInstance) {
 
   fastify.get('/db/conns', async () => {
     const withStatus = await Promise.all(conns().map(async (c) => {
-      try { await test(c); return { ...c, ok: true }; } catch (e: any) { return { ...c, ok: false, err: String(e?.message || e).slice(0, 200) }; }
+      const plainC = { ...c, password: c.password ? dec(c.password) : '' };
+      try { await test(plainC); return { ...plainC, ok: true }; } catch (e: any) { return { ...plainC, ok: false, err: String(e?.message || e).slice(0, 200) }; }
     }));
     return withStatus;
   });
@@ -226,10 +231,11 @@ export async function register(fastify: FastifyInstance) {
   fastify.post('/db/conns', (req, reply) => {
     const b = (req.body || {}) as any;
     if (!b.name || !DB_TYPES[b.type]) return reply.code(400).send({ error: '缺少 name/type' });
-    const c: DbConn = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: b.name, type: b.type, container: b.container || '', host: b.host || '', port: b.port ? Number(b.port) : undefined, user: b.user || '', password: b.password || '', database: b.database || '', url: b.url || '' };
-    store.upsert(KEY, c); audit('db.conn', c.name, `${c.type} ${c.host || c.container}`); return { ok: true, conn: c };
+    const c: DbConn = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: b.name, type: b.type, container: b.container || '', host: b.host || '', port: b.port ? Number(b.port) : undefined, user: b.user || '', password: b.password ? (enc(b.password) as string) : '', database: b.database || '', url: b.url || '' };
+    store.upsert(KEY, c); audit('db.conn', c.name, `${c.type} ${c.host || c.container}`); return { ok: true, conn: { ...c, password: b.password || '' } };
   });
-  fastify.put('/db/conns/:id', (req) => { const id = String((req.params as any).id); const b = (req.body || {}) as any; store.write(KEY, conns().map((c) => (c.id === id ? { ...c, ...b, id } : c))); return { ok: true }; });
+  fastify.put('/db/conns/:id', (req) => { const id = String((req.params as any).id); const b = (req.body || {}) as any;
+    store.write(KEY, conns().map((c) => { if (c.id !== id) return c; const pw = b.password !== undefined ? (b.password ? (enc(b.password) as string) : '') : c.password; return { ...c, ...b, id, password: pw }; })); return { ok: true }; });
   fastify.delete('/db/conns/:id', (req) => { store.write(KEY, conns().filter((c) => c.id !== String((req.params as any).id))); return { ok: true }; });
 
   const find = (req: any) => conns().find((c) => c.id === String((req.params as any).id));
