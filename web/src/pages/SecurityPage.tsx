@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Card, Tag, Space, Select, Input, Collapse, Alert, Switch, Tooltip, Button, Empty, Divider, Badge, Typography,
+  Card, Tag, Space, Select, Input, Collapse, Alert, Switch, Tooltip, Button, Empty, Divider, Badge, Typography, Statistic, Progress, List,
 } from 'antd';
 import {
   SafetyCertificateOutlined, PlayCircleOutlined, CopyOutlined, CloseCircleOutlined, CheckCircleOutlined,
@@ -29,6 +29,7 @@ export default function SecurityPage() {
   const [res, setRes] = useState<Record<string, any>>({});
   const [err, setErr] = useState<Record<string, string>>({});
   const [params, setParams] = useState<Record<string, Record<string, string>>>({});
+  const [metrics, setMetrics] = useState<any>(null);
 
   const load = async () => {
     setLoadErr(''); setCatalog(null);
@@ -39,6 +40,12 @@ export default function SecurityPage() {
     } catch (e: any) { setLoadErr(e.message || '加载失败,请确认后端已重启且 /api/sec/tools 可访问'); }
   };
   useEffect(() => { load(); }, []);
+  useEffect(() => {
+    let alive = true;
+    const refresh = () => api.get('/sec/metrics').then((m) => alive && setMetrics(m)).catch(() => {});
+    refresh(); const timer = setInterval(refresh, 10000);
+    return () => { alive = false; clearInterval(timer); };
+  }, []);
 
   const groups = useMemo(() => {
     const g: Record<string, any[]> = {};
@@ -49,7 +56,7 @@ export default function SecurityPage() {
   const runTool = async (t: any) => {
     const body: any = { tool: t.id, ack: ack ? 'yes' : 'no' };
     if (t.runOn === 'host') body.hostId = hostSel || 'local';
-    else { body.target = target; body.params = params[t.id] || {}; }
+    else { body.target = params[t.id]?.__target ?? target; body.params = params[t.id] || {}; }
     setBusyId(t.id); setErr((e) => ({ ...e, [t.id]: '' })); setRes((r) => ({ ...r, [t.id]: null }));
     try {
       const r = await api.post('/sec/run', body);
@@ -90,6 +97,22 @@ export default function SecurityPage() {
       </Card>
       <TargetCenter />
       <SecTargets />
+
+      {metrics && <Card size="small" style={{ marginBottom: 14 }} title={<Space><SafetyCertificateOutlined style={{ color: '#13c2c2' }} /><b>安全能力健康度</b><Typography.Text type="secondary" style={{ fontSize: 12 }}>每 10 秒刷新</Typography.Text></Space>}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10, marginBottom: 14 }}>
+          <Card size="small"><Statistic title="可执行工具" value={metrics.available} suffix={`/ ${metrics.total}`} valueStyle={{ color: metrics.available === metrics.total ? '#389e0d' : '#d48806' }} /></Card>
+          <Card size="small"><Statistic title="危险工具" value={metrics.dangerous} suffix=" 个" valueStyle={{ color: '#cf1322' }} /></Card>
+          <Card size="small"><Statistic title="最近执行成功率" value={metrics.successRate == null ? '—' : metrics.successRate} suffix={metrics.successRate == null ? '' : '%'} /></Card>
+          <Card size="small"><Statistic title="最近执行次数" value={metrics.recent?.length || 0} suffix=" 次" /></Card>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 12 }}>
+          {Object.entries(metrics.byGroup || {}).map(([name, stat]: any) => <div key={name}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 3 }}><span>{name}</span><span>{stat.available}/{stat.total}</span></div>
+            <Progress percent={stat.total ? Math.round(stat.available / stat.total * 100) : 0} size="small" status={stat.available === stat.total ? 'success' : 'active'} showInfo={false} />
+          </div>)}
+        </div>
+        {!!metrics.recent?.length && <><Divider style={{ margin: '12px 0 8px' }} /><List size="small" split={false} grid={{ gutter: 8, column: 2 }} dataSource={metrics.recent.slice(0, 6)} renderItem={(r: any) => <List.Item style={{ margin: 0 }}><Space size={5}><Badge status={r.ok ? 'success' : 'error'} /><span>{r.tool}</span><Typography.Text type="secondary" style={{ fontSize: 11 }}>{r.time ? new Date(r.time).toLocaleTimeString() : ''}</Typography.Text></Space></List.Item>} /></>}
+      </Card>}
 
       {loadErr ? (
         <Card><Alert type="error" showIcon message={loadErr} action={<Button size="small" type="primary" onClick={load}>重试</Button>} /></Card>

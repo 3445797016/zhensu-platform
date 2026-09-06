@@ -5,6 +5,7 @@ import { execSync } from 'node:child_process';
 import { audit } from '../lib/audit.js';
 
 const sh = (cmd: string) => { try { const r = execSync(cmd, { timeout: 25000, shell: '/bin/bash', encoding: 'utf-8' }); return { code: 0, stdout: String(r), stderr: '' }; } catch (e: any) { return { code: e.status ?? 1, stdout: String(e.stdout || ''), stderr: String(e.stderr || e.message) }; } };
+const shq = (value: unknown) => "'" + String(value ?? '').replace(/'/g, `'\\''`) + "'";
 const hasUfw = () => { const r = sh('ufw status 2>/dev/null | head -1'); return /Status: active/i.test(r.stdout); };
 const ufwActive = hasUfw;
 
@@ -83,7 +84,8 @@ export async function register(fastify: FastifyInstance) {
     const source = String(b.source || '').trim();
     if (source && !/^[\w.:\/-]+$/.test(source)) return reply.code(400).send({ error: '来源格式非法' });
     if (ufwActive() && b.engine === 'ufw') {
-      const cmd = `ufw ${action === 'ACCEPT' ? 'allow' : 'deny'} ${port ? port + '/' + proto : proto} ${source ? 'from ' + source : ''} ${b.comment ? 'comment "' + b.comment + '"' : ''} 2>&1`;
+      const comment = b.comment ? `comment ${shq(String(b.comment).slice(0, 120))}` : '';
+      const cmd = `ufw ${action === 'ACCEPT' ? 'allow' : 'deny'} ${port ? port + '/' + proto : proto} ${source ? 'from ' + source : ''} ${comment} 2>&1`;
       const r = sh(cmd);
       if (r.code !== 0) return reply.code(500).send({ error: r.stderr || r.stdout });
       audit('firewall', action === 'ACCEPT' ? 'ufw放行' : 'ufw拒绝', `${proto}/${port || '*'} from ${source || 'all'}`.trim());
@@ -100,6 +102,9 @@ export async function register(fastify: FastifyInstance) {
   fastify.post('/firewall/batch', (req, reply) => {
     const { ports, proto = 'tcp', source = '' } = (req.body || {}) as any;
     if (!Array.isArray(ports)) return reply.code(400).send({ error: 'ports 需为数组' });
+    if (!['tcp', 'udp', 'icmp', 'any'].includes(String(proto))) return reply.code(400).send({ error: 'proto 非法' });
+    if (source && !/^[\w.:\/-]+$/.test(String(source))) return reply.code(400).send({ error: '来源格式非法' });
+    if (ports.length > 100 || ports.some((p) => !/^\d{1,5}(:\d{1,5})?$/.test(String(p)))) return reply.code(400).send({ error: '端口格式非法' });
     const out: string[] = [];
     try { for (const p of ports) out.push(addRule({ action: 'ACCEPT', proto, port: String(p), source: source || undefined })); }
     catch (e: any) { return reply.code(500).send({ error: String(e?.message || e) }); }
@@ -118,6 +123,8 @@ export async function register(fastify: FastifyInstance) {
     }
     const spec = String(b.spec || '');
     if (!spec.startsWith('-A INPUT ')) return reply.code(400).send({ error: 'spec 需以 -A INPUT 开头' });
+    // `spec` is passed to a shell; reject shell metacharacters before using it.
+    if (/[\0\r\n;|&$`<>]/.test(spec)) return reply.code(400).send({ error: 'spec 含非法字符' });
     const r = sh(`iptables -D ${spec.replace(/^-A INPUT\s+/, '')} 2>&1`);
     if (r.code !== 0) return reply.code(500).send({ error: r.stderr || '删除失败(规则不存在?)' });
     audit('firewall.delete', spec);

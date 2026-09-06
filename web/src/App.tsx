@@ -5,6 +5,7 @@ import {
   ClusterOutlined, ControlOutlined, CodeOutlined, ToolOutlined, MessageOutlined, RocketOutlined,
   MonitorOutlined, BellOutlined, ApiOutlined, DatabaseOutlined, BookOutlined, SafetyCertificateOutlined,
   FolderOpenOutlined, HistoryOutlined, GlobalOutlined, FireOutlined, CloudDownloadOutlined, FileSearchOutlined,
+  LockOutlined, UserOutlined,
 } from '@ant-design/icons';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
@@ -30,40 +31,38 @@ import BackupCenter from './pages/BackupCenter';
 import WebLogs from './pages/WebLogs';
 import SystemCenter from './pages/SystemCenter';
 import DatabaseCenter from './pages/DatabaseCenter';
+import HeaderTools from './components/AccountCenter';
 
 const { Sider, Header, Content } = Layout;
 
 // 登录页(启用登录保护后展示)
 function LoginScreen({ onOk }: { onOk: () => void }) {
+  const [user, setUser] = useState('root');
   const [pwd, setPwd] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const doLogin = async () => {
+    setBusy(true); setErr('');
+    try {
+      const r = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user, password: pwd }) });
+      const j = await r.json();
+      if (r.ok) onOk(); else setErr(j?.error || '登录失败');
+    } catch (e: any) { setErr(String(e?.message || e)); }
+    setBusy(false);
+  };
   return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#eef2ff,#f9f0ff)' }}>
-      <Card style={{ width: 380 }}>
+      <Card style={{ width: 400 }}>
         <Space direction="vertical" style={{ width: '100%' }} size={12}>
-          <div style={{ textAlign: 'center' }}><ApiOutlined style={{ fontSize: 30, color: '#4f8cff' }} /><div style={{ fontSize: 20, fontWeight: 700, marginTop: 6 }}>轸宿智汇平台</div></div>
-          <Alert type="warning" showIcon message="已启用登录保护,请输入口令进入" />
+          <div style={{ textAlign: 'center' }}><ApiOutlined style={{ fontSize: 30, color: '#4f8cff' }} /><div style={{ fontSize: 20, fontWeight: 700, marginTop: 6 }}>轸宿智汇平台</div><div style={{ color: '#999', fontSize: 13 }}>智能运维 · Agent 管理 · DevOps</div></div>
+          <Alert type="warning" showIcon message="已启用登录保护,请输入管理员账号口令" />
           {err && <Alert type="error" showIcon message={err} />}
-          <Input.Password placeholder="管理员口令" value={pwd} onChange={(e) => setPwd(e.target.value)}
-            onPressEnter={async () => {
-              setBusy(true); setErr('');
-              try {
-                const r = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pwd }) });
-                const j = await r.json();
-                if (r.ok) onOk(); else setErr(j?.error || '登录失败');
-              } catch (e: any) { setErr(String(e?.message || e)); }
-              setBusy(false);
-            }} />
-          <Button type="primary" block loading={busy} onClick={async () => {
-            setBusy(true); setErr('');
-            try {
-              const r = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pwd }) });
-              const j = await r.json();
-              if (r.ok) onOk(); else setErr(j?.error || '登录失败');
-            } catch (e: any) { setErr(String(e?.message || e)); }
-            setBusy(false);
-          }}>登 录</Button>
+          <Input prefix={<UserOutlined />} placeholder="管理员账号(root)" value={user} onChange={(e) => setUser(e.target.value)}
+            onPressEnter={() => { if (!busy) doLogin(); }} />
+          <Input.Password prefix={<LockOutlined />} placeholder="管理员密码" value={pwd} onChange={(e) => setPwd(e.target.value)}
+            onPressEnter={() => { if (!busy) doLogin(); }} />
+          <Button type="primary" block loading={busy} onClick={doLogin}>登 录</Button>
+          <div style={{ textAlign: 'center' }}><Typography.Text type="secondary" style={{ fontSize: 12 }}>会话有效期 24 小时 · 同一账号多点登录</Typography.Text></div>
         </Space>
       </Card>
     </div>
@@ -149,9 +148,7 @@ export default function App() {
           </Space>
           <Space>
             <Tooltip title="在线编程"><Button type="link" icon={<CodeOutlined />} onClick={() => nav('/code')}>在线编程</Button></Tooltip>
-            <Tooltip title="点击查看 Agent"><Badge status="processing" /><RobotOutlined /></Tooltip>
-            <Tooltip title="告警中心"><Badge dot><BellOutlined style={{ fontSize: 16 }} /></Badge></Tooltip>
-            <Avatar style={{ background: '#4f8cff' }}>Op</Avatar>
+            <HeaderTools />
           </Space>
         </Header>
         <Content style={{ margin: 16, padding: 8 }}>

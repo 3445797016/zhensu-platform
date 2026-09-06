@@ -11,7 +11,7 @@ export async function register(fastify: FastifyInstance) {
     const ctxs = K.listContexts();
     const cur = K.currentContext();
     const ver = K.serverVersion();
-    let nodesR = { ok: false, items: [] as any[], error: '' };
+    let nodesR: { ok: boolean; items: any[]; error?: string } = { ok: false, items: [], error: '' };
     let podsCount = 0, deploymentsCount = 0;
     if (ver.available) {
       nodesR = K.nodes();

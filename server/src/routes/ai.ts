@@ -50,12 +50,12 @@ async function runLoop(providers: Provider[], messages: any[], onEvent: (kind: s
 
 export async function register(fastify: FastifyInstance) {
   // 合并配置：默认预置(含 pi 注入 key) + 用户在页面保存的覆盖(model/baseURL/apiKey)
-  function mergedProviders(): { def: any; apiKey: string }[] {
+  function mergedProviders(): { def: Provider; apiKey: string }[] {
     const cfg = store.read<any>('ai', {});
     const ovs = cfg.providers || {};
     return defaultProviders().map((def) => {
       const ov = ovs[def.id] || {};
-      return { def: { ...def, model: ov.model || def.defaultModel, baseURL: ov.baseURL || def.baseURL, defaultModel: ov.model || def.defaultModel }, apiKey: ov.apiKey || def.apiKey };
+      return { def: { ...def, baseURL: ov.baseURL || def.baseURL, defaultModel: ov.model || def.defaultModel }, apiKey: ov.apiKey || def.apiKey };
     });
   }
 
@@ -107,7 +107,7 @@ export async function register(fastify: FastifyInstance) {
       return;
     }
     const model = cfg.selected?.model || chosen.def.defaultModel;
-    const p: Provider = { id: chosen.def.id, name: chosen.def.name, baseURL: chosen.def.baseURL, defaultModel: model, apiKey: chosen.apiKey };
+    const p: Provider = { ...chosen.def, defaultModel: model, apiKey: chosen.apiKey };
     if (!p.apiKey) {
       reply.header('content-type', 'text/event-stream; charset=utf-8');
       reply.raw.write('event: err\ndata: ' + JSON.stringify({ error: '未配置 API Key。请在「AI 设置」为 ' + p.name + ' 填入 key。' }) + '\n\n');

@@ -23,6 +23,7 @@ export async function register(fastify: FastifyInstance) {
   // ---- 脚本库
   fastify.get('/devops/scripts', () => store.list(SCR));
   fastify.post('/devops/scripts', (req) => store.upsert(SCR, { id: randomUUID(), ...((req.body as any).data ?? req.body as any), updatedAt: new Date().toISOString() }));
+  fastify.delete('/devops/scripts/:id', (req) => { store.remove(SCR, (req.params as any).id); return { ok: true }; });
 
   // ---- 流水线
   fastify.get('/devops/pipelines', () => store.list(P));

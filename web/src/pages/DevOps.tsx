@@ -3,6 +3,7 @@ import { Card, Tabs, Table, Button, Space, Modal, Form, Input, Select, Tag, App,
 import { PlusOutlined, PlayCircleOutlined, DeleteOutlined, CodeOutlined } from '@ant-design/icons';
 import MonacoEditor from '@monaco-editor/react';
 import { api } from '../api';
+import DevOpsToolchain from './DevOpsCI';
 
 export default function DevOps() {
   return (
@@ -11,6 +12,7 @@ export default function DevOps() {
       { key: 'releases', label: '发布记录', children: <Releases /> },
       { key: 'scripts', label: '脚本库', children: <Scripts /> },
       { key: 'env', label: '环境管理', children: <Envs /> },
+      { key: 'cicd', label: 'CI/CD 工具链', children: <DevOpsToolchain /> },
     ]} />
   );
 }
@@ -105,7 +107,7 @@ function Scripts() {
     { title: '名称', dataIndex: 'name', render: (v: string) => <b>{v}</b> },
     { title: '标签', dataIndex: 'tags', render: (t: string[]) => (t || []).map((x) => <Tag key={x}>{x}</Tag>) },
     { title: '内容', dataIndex: 'content', ellipsis: true },
-    { title: '操作', width: 100, render: (_: any, r: any) => <Popconfirm title="删除?" onConfirm={async () => { await api.del('/devops/pipelines/__none__').catch(() => {}); load(); }}><Button size="small" danger>删</Button></Popconfirm> },
+    { title: '操作', width: 100, render: (_: any, r: any) => <Popconfirm title="删除?" onConfirm={async () => { await api.del('/devops/scripts/' + r.id); load(); }}><Button size="small" danger>删</Button></Popconfirm> },
   ];
   return <Card size="small">
     <Button type="primary" icon={<PlusOutlined />} style={{ marginBottom: 12 }} onClick={() => setOpen(true)}>新增脚本</Button>

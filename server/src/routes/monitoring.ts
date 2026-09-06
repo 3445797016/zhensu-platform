@@ -97,7 +97,7 @@ export async function register(fastify: FastifyInstance) {
 
   // ---- 采集
   fastify.get('/monitor/collect', async (req, reply) => {
-    const cfg = store.read(CFG, { monitoredHostIds: [], intervalSec: 15, thresholds: {} });
+    const cfg = store.read<{ monitoredHostIds: string[]; intervalSec: number; thresholds: { cpu?: number; mem?: number; disk?: number } }>(CFG, { monitoredHostIds: [], intervalSec: 15, thresholds: {} });
     const hosts = store.list<Host>('hosts').filter((h) => cfg.monitoredHostIds?.includes(h.id));
     const sampleId = (req.query as any).sampleId || 'latest';
     const results = [] as any[];

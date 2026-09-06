@@ -13,6 +13,9 @@ import { register as agents } from './routes/agents.js';
 import { register as k8s } from './routes/k8s.js';
 import { register as ai } from './routes/ai.js';
 import { register as devops } from './routes/devops.js';
+import { register as devopsCi } from './routes/devops-ci.js';
+import { register as jenkins } from './routes/jenkins.js';
+import { register as buildTools } from './routes/build-tools.js';
 import { register as monitoring } from './routes/monitoring.js';
 import { register as ops } from './routes/ops.js';
 import { register as linux } from './routes/linux.js';
@@ -37,9 +40,12 @@ import { store } from './lib/store.js';
 store.upsert('hosts', { id: 'local', name: '本机(Linux)', kind: 'local', tags: ['core'], createdAt: new Date().toISOString() });
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const app = Fastify({ logger: { level: process.env.LOG || 'info' } });
+const app = Fastify({ logger: { level: process.env.LOG || 'info' }, bodyLimit: 100 * 1024 * 1024 });
 
-await app.register(cors, { origin: true });
+const corsOrigin = process.env.WEB_ORIGIN
+  ? process.env.WEB_ORIGIN.split(',').map((v) => v.trim()).filter(Boolean)
+  : true;
+await app.register(cors, { origin: corsOrigin });
 await app.register(websocket);
 
 app.get('/api/health', async () => ({
@@ -54,11 +60,14 @@ app.addHook('onRequest', (req, reply, done) => {
   if (u.startsWith('/api/auth/') || u.startsWith('/api/open/') || u === '/api/health' || req.method === 'OPTIONS') return done();
   const m = String(req.headers.cookie || '').match(/zs_sess=([^;]+)/);
   const tok = m ? decodeURIComponent(m[1]) : '';
-  if (tok && secCfg.sessions?.[tok]) return done();
+  // Session entries store their ISO expiration.  Checking only key presence
+  // would keep a persisted session valid indefinitely after its 3-day TTL.
+  const expiresAt = tok ? secCfg.sessions?.[tok] : undefined;
+  if (expiresAt && Number.isFinite(Date.parse(expiresAt)) && Date.parse(expiresAt) > Date.now()) return done();
   reply.code(401).send({ error: '未登录' });
 });
 
-for (const m of [hosts, docker, tools, agents, k8s, ai, devops, monitoring, ops, linux, code, kb, problems, sec, files, auth, admin, websites, firewall, backup, weblog, database, targets, seclab, tasksApi]) await app.register(m, { prefix: '/api' });
+for (const m of [hosts, docker, tools, agents, k8s, ai, devops, devopsCi, jenkins, buildTools, monitoring, ops, linux, code, kb, problems, sec, files, auth, admin, websites, firewall, backup, weblog, database, targets, seclab, tasksApi]) await app.register(m, { prefix: '/api' });
 
 // 托管前端构建产物（存在则提供）
 const webDist = join(__dirname, '..', '..', 'web', 'dist');

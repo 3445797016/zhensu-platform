@@ -5,7 +5,17 @@ import { store } from '../lib/store.js';
 import { audit } from '../lib/audit.js';
 
 const sh = (cmd: string, timeout = 60000) => { try { const r = execSync(cmd, { timeout, shell: '/bin/bash', encoding: 'utf-8', maxBuffer: 64 * 1024 * 1024 }); return { code: 0, stdout: String(r), stderr: '' }; } catch (e: any) { return { code: e.status ?? 1, stdout: String(e.stdout || ''), stderr: String(e.stderr || e.message) }; } };
-const ipOk = (s: string) => /^[\w.:\-/]+$/.test(s);
+const ipOk = (value: string) => {
+  const s = String(value || '').trim();
+  if (!s || s.length > 128 || s.startsWith('-') || /[\u0000-\u001f\u007f;&|$`()<>\\'"\s]/.test(s)) return false;
+  if (/^(?:\d{1,3}\.){3}\d{1,3}(?:\/\d{1,2})?$/.test(s)) {
+    const [ip, prefix] = s.split('/');
+    if (ip.split('.').some((n) => Number(n) > 255)) return false;
+    return prefix === undefined || (Number(prefix) >= 0 && Number(prefix) <= 32);
+  }
+  if (/^[A-Fa-f0-9:]+(?:\/\d{1,3})?$/.test(s)) return true;
+  return /^[A-Za-z0-9](?:[A-Za-z0-9.-]{0,125}[A-Za-z0-9])?$/.test(s);
+};
 const target = () => store.list<any>('seclab-targets');
 const scans = () => store.read<any>('seclab-scans', {});
 const saveScans = (s: any) => store.write('seclab-scans', s);
@@ -52,9 +62,9 @@ function doScan(ip: string, kind: string) {
 
 const cfg = () => store.read<any>('seclab-cfg', { auto: false, intervalMin: 10, kinds: ['quick'] });
 let timer: any = null, runningAuto = false;
-async function autoTick() {
+async function autoTick(force = false) {
   if (runningAuto) return;
-  const c = cfg(); if (!c.auto) return;
+  const c = cfg(); if (!c.auto && !force) return;
   const list = store.list<any>('seclab-targets');
   if (!list.length) return;
   runningAuto = true;
@@ -74,9 +84,25 @@ function arm() {
 
 export async function register(fastify: FastifyInstance) {
   fastify.get('/seclab/targets', () => ({ list: target(), scans: scans(), cfg: cfg(), scanning: runningAuto }));
+  fastify.get('/seclab/summary', () => {
+    const list = target(); const all = scans();
+    const rows = list.map((t) => {
+      const history = all[t.ip] || []; const latest = history[0];
+      const ports = history.flatMap((s: any) => s.ports || []).filter((p: any, i: number, a: any[]) => a.findIndex((x) => x.port === p.port) === i);
+      return { ip: t.ip, name: t.name, scans: history.length, latest: latest?.time || null, openPorts: ports.length, vulnerable: history.some((s: any) => s.kind === 'smb' && s.vulnerable) };
+    });
+    return { total: list.length, scanned: rows.filter((r) => r.scans > 0).length, vulnerable: rows.filter((r) => r.vulnerable).length, openPorts: rows.reduce((n, r) => n + r.openPorts, 0), rows };
+  });
   fastify.get('/seclab/config', () => ({ ...cfg(), scanning: runningAuto }));
-  fastify.put('/seclab/config', (req) => { const b: any = (req.body || {}) as any; store.write('seclab-cfg', { ...cfg(), ...b }); arm(); return { ...cfg(), scanning: runningAuto }; });
-  fastify.post('/seclab/scanall', async () => { void autoTick(); return { started: true }; });
+  fastify.put('/seclab/config', (req, reply) => {
+    const b: any = (req.body || {}) as any;
+    const intervalMin = Math.max(1, Math.min(1440, Number(b.intervalMin ?? cfg().intervalMin) || 10));
+    const kinds = Array.isArray(b.kinds) ? b.kinds.map(String).filter((k: string) => !!SCANS[k]) : cfg().kinds;
+    if (!kinds.length) return reply.code(400).send({ error: '至少选择一种有效扫描类型' });
+    store.write('seclab-cfg', { auto: b.auto === undefined ? !!cfg().auto : b.auto === true, intervalMin, kinds });
+    arm(); return { ...cfg(), scanning: runningAuto };
+  });
+  fastify.post('/seclab/scanall', async () => { void autoTick(true); return { started: true }; });
 
   fastify.post('/seclab/targets', (req, reply) => {
     const b = (req.body || {}) as any;
@@ -98,11 +124,13 @@ export async function register(fastify: FastifyInstance) {
     store.write('seclab-targets', list.map((t) => (t.ip === ip ? { ...t, name: b.name || t.name, note: b.note !== undefined ? b.note : t.note } : t)));
     return { ok: true };
   });
-  fastify.delete('/seclab-targets/:ip', (req) => {
+  const removeTarget = (req: any) => {
     const ip = String((req.params as any).ip);
     store.write('seclab-targets', target().filter((t) => t.ip !== ip));
     return { ok: true };
-  });
+  };
+  fastify.delete('/seclab/targets/:ip', removeTarget);
+  fastify.delete('/seclab-targets/:ip', removeTarget); // 兼容旧前端
 
   // 一键扫描并留存
   fastify.post('/seclab/scan', async (req, reply) => {
@@ -116,3 +144,5 @@ export async function register(fastify: FastifyInstance) {
   });
   arm();
 }
+
+

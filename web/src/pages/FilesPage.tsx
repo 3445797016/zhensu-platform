@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Card, Table, Button, Space, Input, Tag, Select, Breadcrumb, Modal, message, Drawer, Alert, Popconfirm, Tooltip } from 'antd';
+import { Card, Table, Button, Space, Input, Tag, Select, Breadcrumb, Modal, message, Drawer, Alert, Popconfirm, Tooltip, Upload } from 'antd';
 import { FolderOutlined, FileTextOutlined, FileOutlined, ReloadOutlined, UploadOutlined, PlusOutlined, DeleteOutlined, DownloadOutlined, EditOutlined, HomeOutlined } from '@ant-design/icons';
 import { api } from '../api';
 
@@ -86,8 +86,9 @@ export default function FilesPage() {
       <Space wrap style={{ marginBottom: 10 }}>
         <Breadcrumb items={path.split('/').filter(Boolean).map((s, i, a) => ({ title: s }))} />
         <Button size="small" icon={<PlusOutlined />} onClick={() => { setModal({ kind: 'mkdir' }); setModalVal(''); }}>新建目录</Button>
-        <label style={{ cursor: 'pointer' }}><Button size="small" icon={<UploadOutlined />} >上传文件</Button>
-          <input type="file" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ''; }} /></label>
+        <Upload showUploadList={false} beforeUpload={(file) => { upload(file as unknown as File); return false; }}>
+          <Button size="small" icon={<UploadOutlined />}>上传文件</Button>
+        </Upload>
       </Space>
       <Table rowKey="name" size="small" loading={loading} dataSource={entries} columns={cols as any} pagination={false} scroll={{ y: 'calc(100vh - 320px)' }} />
 

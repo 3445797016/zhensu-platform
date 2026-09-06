@@ -5,6 +5,15 @@ import { TOOLS, probeTool, DOCKER_TEMPLATE, isDockerDeployable, dockerRunCommand
 import { run } from '../lib/host.js';
 
 const DEP = 'deployments';
+// Container names are interpolated into shell commands below.  Keep the
+// route parameter constrained to Docker's portable name subset so a crafted
+// URL cannot inject an extra command (for example `; rm -rf ...`).
+const safeContainerName = (value: unknown) => {
+  const name = String(value || '');
+  if (!/^[A-Za-z0-9][A-Za-z0-9_.-]{0,120}$/.test(name)) throw new Error('容器名非法');
+  return name;
+};
+const SAFE_ACTIONS = new Set(['start', 'stop', 'restart', 'pause', 'unpause']);
 
 async function instanceState(rec: any): Promise<any> {
   const host: any = rec.hostId === 'local' ? { id: 'local', kind: 'local', name: '本机' } : store.list<any>('hosts').find((h) => h.id === rec.hostId);
@@ -111,7 +120,10 @@ export async function register(fastify: FastifyInstance) {
     const { hostId } = req.body as any;
     const host: any = !hostId || hostId === 'local' ? { id: 'local', kind: 'local', name: '本机' } : store.list<any>('hosts').find((h) => h.id === hostId);
     if (!host) return { ok: false, error: '主机不存在' };
-    const r = await run(host, `docker ${action} ${containerName} 2>&1`, 30000);
+    if (!SAFE_ACTIONS.has(String(action))) return reply.code(400).send({ error: 'action 非法' });
+    let name: string;
+    try { name = safeContainerName(containerName); } catch (e: any) { return reply.code(400).send({ error: e.message }); }
+    const r = await run(host, `docker ${action} ${name} 2>&1`, 30000);
     return { ok: r.code === 0, output: r.stdout, error: r.stderr };
   });
 
@@ -121,7 +133,11 @@ export async function register(fastify: FastifyInstance) {
     const { hostId, tail } = req.query as any;
     const host: any = !hostId || hostId === 'local' ? { id: 'local', kind: 'local', name: '本机' } : store.list<any>('hosts').find((h) => h.id === hostId);
     if (!host) return reply.code(400).send({ error: '主机不存在' });
-    const r = await run(host, `docker logs --tail ${Number(tail || 300)} ${containerName} 2>&1`, 30000);
+    let name: string;
+    try { name = safeContainerName(containerName); } catch (e: any) { return reply.code(400).send({ error: e.message }); }
+    const tailNum = Number(tail || 300);
+    if (!Number.isInteger(tailNum) || tailNum < 1 || tailNum > 10000) return reply.code(400).send({ error: 'tail 需为 1-10000 的整数' });
+    const r = await run(host, `docker logs --tail ${tailNum} ${name} 2>&1`, 30000);
     return { ok: r.code === 0, content: r.stdout, error: r.stderr };
   });
 

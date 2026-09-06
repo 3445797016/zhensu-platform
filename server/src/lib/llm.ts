@@ -28,12 +28,19 @@ const EXTRA: Array<Omit<Provider, 'apiKey'>> = [
   { id: 'ollama', name: 'Ollama(本地)', baseURL: 'http://localhost:11434', chatPath: '/v1/chat/completions', defaultModel: 'qwen3', models: ['qwen3', 'llama3', 'deepseek-r1'] },
 ];
 
-function piAuth(): Record<string, string> {
+type PiAuthEntry = string | { key?: string };
+
+function piAuth(): Record<string, PiAuthEntry> {
   const candidates = [process.env.HOME && join(process.env.HOME, '.pi', 'agent', 'auth.json'), '/root/.pi/agent/auth.json'];
   for (const p of candidates) {
     if (p && existsSync(p)) { try { return JSON.parse(readFileSync(p, 'utf-8')); } catch {} }
   }
   return {};
+}
+
+function authKey(auth: Record<string, PiAuthEntry>, providerId: string): string {
+  const entry = auth[providerId];
+  return typeof entry === 'string' ? entry : entry?.key || '';
 }
 function piModelsStore(): any {
   const candidates = [process.env.HOME && join(process.env.HOME, '.pi', 'agent', 'models-store.json'), '/root/.pi/agent/models-store.json'];
@@ -58,7 +65,7 @@ export function defaultProviders(): Provider[] {
       if (!s?.models?.length) continue;
       const models = s.models.map((m: any) => m.id);
       const baseURL = s.models[0].baseUrl || '';
-      const key = auth[skey]?.key || '';
+      const key = authKey(auth, skey);
       const prefer = models.find((m: string) => /pro$/.test(m)) || models[models.length - 1] || models[0];
       list.push({ id: info.id, name: info.name, baseURL, chatPath: inferChatPath(baseURL), defaultModel: prefer, models, apiKey: key });
     }
@@ -66,14 +73,14 @@ export function defaultProviders(): Provider[] {
   for (const e of EXTRA) {
     if (list.some((x) => x.id === e.id)) continue;
     const mapped = STORE_KEY[e.id]; // openai/ollama 不在 store，直接用预置
-    list.push({ ...e, apiKey: (e.id === 'openai' ? auth.openai?.key : '') || '' });
+    list.push({ ...e, apiKey: e.id === 'openai' ? authKey(auth, 'openai') : '' });
   }
   // deepseek：官方 API 可请求名为 deepseek-chat / deepseek-reasoner（store 里的 v4-* 为内部展示名）
   const ds = list.find((x) => x.id === 'deepseek');
   if (ds) { ds.defaultModel = 'deepseek-chat'; ds.models = ['deepseek-chat', 'deepseek-reasoner']; ds.chatPath = '/v1/chat/completions'; ds.baseURL = ds.baseURL || 'https://api.deepseek.com'; }
   // deepseek 等若 store 缺失则补默认
   if (!list.some((x) => x.id === 'deepseek')) {
-    list.unshift({ id: 'deepseek', name: 'DeepSeek', baseURL: 'https://api.deepseek.com', chatPath: '/v1/chat/completions', defaultModel: 'deepseek-chat', models: ['deepseek-chat', 'deepseek-reasoner'], apiKey: auth.deepseek?.key || '' });
+    list.unshift({ id: 'deepseek', name: 'DeepSeek', baseURL: 'https://api.deepseek.com', chatPath: '/v1/chat/completions', defaultModel: 'deepseek-chat', models: ['deepseek-chat', 'deepseek-reasoner'], apiKey: authKey(auth, 'deepseek') });
   }
   return list;
 }
