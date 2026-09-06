@@ -4,7 +4,7 @@ import {
   DashboardOutlined, RobotOutlined, CloudServerOutlined, ContainerOutlined,
   ClusterOutlined, ControlOutlined, CodeOutlined, ToolOutlined, MessageOutlined, RocketOutlined,
   MonitorOutlined, BellOutlined, ApiOutlined, DatabaseOutlined, BookOutlined, SafetyCertificateOutlined,
-  FolderOpenOutlined, HistoryOutlined, GlobalOutlined, FireOutlined, CloudDownloadOutlined, FileSearchOutlined,
+  FolderOpenOutlined, HistoryOutlined, GlobalOutlined, FireOutlined, CloudDownloadOutlined, FileSearchOutlined, FileTextOutlined,
   LockOutlined, UserOutlined,
 } from '@ant-design/icons';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
@@ -25,6 +25,7 @@ import SolvePage from './pages/Solve';
 import SecurityPage from './pages/SecurityPage';
 import FilesPage from './pages/FilesPage';
 import TaskCenter from './pages/TaskCenter';
+import ReportPage from './pages/ReportPage';
 import Websites from './pages/Websites';
 import Firewall from './pages/Firewall';
 import BackupCenter from './pages/BackupCenter';
@@ -98,6 +99,7 @@ const MENU: any[] = [
   { key: '/backup', icon: <CloudDownloadOutlined />, label: '备份中心' },
   { key: '/weblog', icon: <FileSearchOutlined />, label: '访问日志' },
   { key: '/tasks', icon: <HistoryOutlined />, label: '任务中心' },
+  { key: '/report', icon: <FileTextOutlined />, label: '📋 巡检报告' },
   { key: '/devops', icon: <RocketOutlined />, label: 'DevOps 流水线' },
   { key: '/code', icon: <CodeOutlined />, label: '在线编程' },
   { key: '/problems', icon: <BookOutlined />, label: '题库刷题' },
@@ -169,6 +171,7 @@ export default function App() {
             <Route path="/backup" element={<BackupCenter />} />
             <Route path="/weblog" element={<WebLogs />} />
             <Route path="/tasks" element={<TaskCenter />} />
+            <Route path="/report" element={<ReportPage />} />
             <Route path="/devops" element={<DevOps />} />
             <Route path="/monitoring" element={<Monitoring />} />
             <Route path="/code" element={<Code />} />
