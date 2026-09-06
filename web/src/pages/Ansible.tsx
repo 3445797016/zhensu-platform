@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Card, Tabs, Table, Button, Space, Tag, Modal, Form, Input, Select, InputNumber, Switch, Alert, Typography, Drawer, Popconfirm, App, Badge } from 'antd';
 import { PlayCircleOutlined, PlusOutlined, DeleteOutlined, ReloadOutlined, EyeOutlined, ThunderboltOutlined, ScheduleOutlined, BookOutlined, DashboardOutlined, StopOutlined } from '@ant-design/icons';
-import MonacoEditor from '@monaco-editor/react';
 import { api } from '../api';
 
 const { Text } = Typography;
@@ -194,8 +193,11 @@ export default function AnsiblePage() {
             <Input placeholder="key=value" style={{ width: 240 }} value={runVars} onChange={(e) => setRunVars(e.target.value)} />
             <Switch checked={runNotify} onChange={setRunNotify} checkedChildren="失败通知" unCheckedChildren="通知" />
           </Space>
-          <div style={{ border: '1px solid #eee', height: 440 }}>
-            <MonacoEditor height="440" language="yaml" value={pbContent} onChange={(v) => setPbContent(v || '')} options={{ minimap: { enabled: false }, fontSize: 13, scrollBeyondLastLine: false }} />
+          <div style={{ border: '1px solid #eee', borderRadius: 6 }}>
+            <Input.TextArea value={pbContent} onChange={(e) => setPbContent(e.target.value)} autoSize={false} rows={22}
+              spellCheck={false} style={{ fontFamily: 'ui-monospace,SFMono-Regular,Menlo,Consolas,monospace', fontSize: 13, lineHeight: 1.6, background: '#0d1117', color: '#c9d1d9', border: 'none', borderRadius: 6 }}
+              placeholder={'---\n- name: 任务名\n  hosts: all\n  become: true\n  tasks:\n    - name: ping\n      ansible.builtin.ping:'} />
+            <div style={{ fontSize: 11, color: '#888', padding: '2px 8px' }}>YAML 编辑(纯文本,离线可用);缩进用两个空格</div>
           </div>
         </Space>
       </Modal>
