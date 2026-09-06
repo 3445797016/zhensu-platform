@@ -10,26 +10,61 @@ const sysPrompt = `你是一个能力全面、善于深度思考的 AI 助手（
 【通用能力】你可以回答任何问题：编程/算法（含代码与解释）、计算机与运维知识、系统设计、Debug、写作、理论等。回答要准确、条理清晰、可用中文；写代码尽量完整可运行并附简要说明。例如用户问“C++ 实现 N 皇后”，你应直接给出高质量回溯实现+分析，不要调用任何工具。
 
 【运维工具】当且仅当用户需要你在“实际机器上操作”（查看/安装/更新组件、管理服务/进程/中间件、查 docker/k8s、探测状态）时，你才需要使用工具：
-在回复中严格输出如下格式的独立一行（只输出一次，可结合自然语言）：
+在回复中严格输出如下格式的独立一行（只输出一次，可结合自然语言，系统会自动执行并把结果返回给你）：
 [CALL]{"host":"<hostId或local>","command":"<bash命令>","reason":"<为什么执行>"}[/CALL]
 命令须单条自包含 bash；危险命令(rm -rf /, mkfs, :(){})会被拒绝。执行前先解释计划，执行后据返回继续。
+注意：这条 [CALL] 标记不会显示给用户，它会自动执行；执行结果会以“[工具返回]”形式回到你的上下文。请基于真实返回继续回答，不要编造输出。
 
 判断规则：纯问答/纯给代码 -> 不调工具直接答；要实际改机器/查机器实况 -> 说明后调工具。`;
 
-function saveSelected(p: Provider) {
-  store.write('ai', { ...store.read('ai', {}), selected: { id: p.id, model: p.defaultModel, baseURL: p.baseURL } });
+// 流式文本过滤器：把 [CALL]...[/CALL] 段从“发给前端展示的文本”中剥离，
+// 避免用户看到原始 JSON 标记（乱码）。模型可能逐字/逐小段输出，标记会跨 chunk，
+// 因此用“保留尾部少量字符作为可能的前缀缓冲”的状态机处理。
+// 返回 { push(d), flush() }：flush 在整段流结束后调用，吐出末尾滞留的正常文本。
+function makeStripFilter(onClean: (t: string) => void) {
+  let buf = '';        // 未决策缓冲
+  let inside = false;  // 是否正处于 [CALL]...[/CALL] 内
+  return {
+    push(d: string) {
+      buf += d;
+      for (;;) {
+        if (!inside) {
+          const i = buf.indexOf('[CALL]');
+          if (i >= 0) {
+            if (i > 0) onClean(buf.slice(0, i));   // 标记前正常文本
+            buf = buf.slice(i + 6);
+            inside = true;
+            continue;
+          }
+          // 无完整标记：输出除末尾 5 字符外的部分（末尾可能是跨 chunk 的 [CALL] 前缀）
+          if (buf.length > 5) { onClean(buf.slice(0, buf.length - 5)); buf = buf.slice(-5); }
+          break;
+        } else {
+          const j = buf.indexOf('[/CALL]');
+          if (j >= 0) { buf = buf.slice(j + 7); inside = false; continue; }
+          // 仍在标记内：丢弃全部，仅保留末尾 6 字符以防 [/CALL] 跨 chunk
+          if (buf.length > 6) buf = buf.slice(-6);
+          break;
+        }
+      }
+    },
+    flush() {
+      if (!inside && buf.length) { onClean(buf); buf = ''; }  // 流结束，剩余为正常文本
+    },
+  };
 }
 
-function masked(p: Provider) { return { ...p, apiKey: p.apiKey ? '***' : '' }; }
-
-// 基于 SSE 的真实流式多步 agent 循环
+// 基于 SSE 的真实流式多步 agent 循环。
+// onEvent: delta(干净文本) / tool(工具执行状态与结果) / done / err
 async function runLoop(providers: Provider[], messages: any[], onEvent: (kind: string, data: any) => void, signal?: AbortSignal) {
   const msgs = [...messages];
   for (let step = 0; step < 5; step++) {
     let content = '';
-    await chat(providers[0], msgs, { stream: true, onDelta: (d) => { content += d; onEvent('delta', d); }, signal });
+    const strip = makeStripFilter((t) => onEvent('delta', t));
+    await chat(providers[0], msgs, { stream: true, onDelta: (d) => { content += d; strip.push(d); }, signal });
+    strip.flush();
     msgs.push({ role: 'assistant', content });
-    const m = content.match(/\[CALL\](\{[\s\S]*?\})\[\/CALL\]/);
+    const m = content.match(/\[CALL\]\s*(\{[\s\S]*?\})\s*\[\/CALL\]/);
     if (!m) break;
     let call: any; try { call = JSON.parse(m[1]); } catch { break; }
     if (/rm\s+-rf\s+\/|mkfs\.|:\(\)\s*\{|>\/dev\/sda/.test(call.command)) {
@@ -92,52 +127,64 @@ export async function register(fastify: FastifyInstance) {
     return { ok: true };
   });
 
-  fastify.get('/ai/chat', { schema: {} }, async (req, reply) => {
-    const q = req.query as any;
-    const message = String(q.message || '');
+  // 统一聊天处理：GET(query: message/code/history) 或 POST(body: {message, code, history})
+  async function chatHandler(req: any, reply: any) {
+    const q = (req.query || {}) as any;
+    const b = (req.body || {}) as any;
+    const message = String(q.message ?? b.message ?? '').trim();
+    let history: any[] = Array.isArray(b.history) ? b.history : [];
+    if (!history.length && q.history) { try { const h = JSON.parse(q.history); if (Array.isArray(h)) history = h; } catch { history = []; } }
+    const codeMode = q.code ?? b.code;
+    if (!message) {
+      reply.header('content-type', 'text/event-stream; charset=utf-8');
+      reply.raw.write('event: err\ndata: ' + JSON.stringify({ error: '消息不能为空' }) + '\n\n');
+      reply.raw.end(); return;
+    }
     const cfg = store.read<any>('ai', {});
     const merged = mergedProviders();
-    // 选择当前 provider：默认取已保存 selected
     const selId = cfg.selected?.id;
     let chosen = merged.find((x) => x.def.id === selId) || merged.find((x) => x.def.id === (q.model || '')) || merged[0];
     if (!chosen) {
       reply.header('content-type', 'text/event-stream; charset=utf-8');
       reply.raw.write('event: err\ndata: ' + JSON.stringify({ error: '无可用模型提供商' }) + '\n\n');
-      reply.raw.end();
-      return;
+      reply.raw.end(); return;
     }
     const model = cfg.selected?.model || chosen.def.defaultModel;
     const p: Provider = { ...chosen.def, defaultModel: model, apiKey: chosen.apiKey };
     if (!p.apiKey) {
       reply.header('content-type', 'text/event-stream; charset=utf-8');
       reply.raw.write('event: err\ndata: ' + JSON.stringify({ error: '未配置 API Key。请在「AI 设置」为 ' + p.name + ' 填入 key。' }) + '\n\n');
-      reply.raw.end();
-      return;
+      reply.raw.end(); return;
     }
     reply.header('content-type', 'text/event-stream; charset=utf-8');
     reply.header('cache-control', 'no-cache');
     reply.header('connection', 'keep-alive');
     const res = reply.raw;
-    const hostsInfo = store.list<Host>('hosts').map((h) => `${h.name}(${h.kind})${h.host ? '@' + h.host : ''} id=${h.id}`).join('\n');
-    const toolsInfo = TOOLS.map((t) => `${t.name}(${t.id})`).join('、');
-    const codeMode = (q as any).code;   // 在线编程助手传入当前代码
-    // RAG：本地知识库检索（未禁用且索引非空时）
+
+    // 知识库检索（异步取一次即可）
     let kbCtx = '';
     try {
-      if (store.read<any>('ai', {}).kb !== false) {
+      if (cfg.kb !== false) {
         const { search } = await import('../modules/kb.js');
-        const hits = search(codeMode ? (message + ' ' + codeMode.slice(0, 500)) : message, 6);
-        if (hits.length) {
-          kbCtx = '\n\n[本地知识库检索结果，可据此回答/引用]\n' + hits.map((h) => `【${h.file}】…${h.text.slice(0, 700)}…`).join('\n');
-        }
+        const hits = search(codeMode ? (message + ' ' + String(codeMode).slice(0, 500)) : message, 6);
+        if (hits.length) kbCtx = '\n\n[本地知识库检索结果，可据此回答/引用]\n' + hits.map((h: any) => `【${h.file}】…${h.text.slice(0, 700)}…`).join('\n');
       }
     } catch { /* kb 不可用则忽略 */ }
+
+    // —— 多轮上下文：信任前端传来的 history，但做数量/长度防护 ——
+    const cleanHist: any[] = [];
+    for (const h of (history || []).slice(-24)) {          // 最多保留最近 24 条
+      const role = h?.role === 'assistant' ? 'assistant' : 'user';
+      const content = String(h?.content ?? '');
+      if (!content.trim()) continue;
+      cleanHist.push({ role, content: content.slice(0, 6000) });
+    }
+    const hostsInfo = store.list<Host>('hosts').map((h) => `${h.name}(${h.kind})${h.host ? '@' + h.host : ''} id=${h.id}`).join('\n');
+    const toolsInfo = TOOLS.map((t) => `${t.name}(${t.id})`).join('、');
     let sys = sysPrompt + `\n\n当前可管理主机:\n${hostsInfo || '（无，请先添加主机）'}\n可探测工具: ${toolsInfo}` + kbCtx;
-    if (codeMode) sys += '\n\n[用户正在编辑器里的代码，请结合它给出解释/修改建议/报错分析，可用 markdown]\n```\n' + codeMode.slice(0, 12000) + '\n```';
-    const msgs: any[] = [
-      { role: 'system', content: sys },
-      { role: 'user', content: message },
-    ];
+    if (codeMode) sys += '\n\n[用户正在编辑器里的代码，请结合它给出解释/修改建议/报错分析，可用 markdown]\n```\n' + String(codeMode).slice(0, 12000) + '\n```';
+    const msgs: any[] = [{ role: 'system', content: sys }, ...cleanHist, { role: 'user', content: message }];
+
     const ac = new AbortController();
     req.raw.on('close', () => ac.abort());
     const send = (ev: string, data: any) => { if (!res.destroyed) res.write(`event: ${ev}\ndata: ${JSON.stringify(data)}\n\n`); };
@@ -151,5 +198,8 @@ export async function register(fastify: FastifyInstance) {
       clearInterval(hb);
     }
     res.end();
-  });
+  }
+
+  fastify.get('/ai/chat', { schema: {} }, chatHandler);
+  fastify.post('/ai/chat', { schema: {} }, chatHandler);
 }

@@ -21,6 +21,7 @@ export default function CodeAssistant({ code, language }: { code: string; langua
 
   const send = async (text: string) => {
     const t = text.trim(); if (!t || busy) return;
+    const hist: { role: 'user' | 'assistant'; content: string }[] = msgs.map((m) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text }));
     const arr: Msg[] = [...msgs, { role: 'user', text: t }, { role: 'ai', text: '' }];
     setMsgs(arr); setInput(''); setBusy(true);
     const ai = arr[arr.length - 1];
@@ -40,7 +41,11 @@ export default function CodeAssistant({ code, language }: { code: string; langua
     };
     try {
       const intro = `当前语言 ${langRef.current}。请针对我编辑器里的代码${t}。`;
-      const resp = await fetch('/api/ai/chat?message=' + encodeURIComponent(intro) + '&code=' + encodeURIComponent(codeRef.current));
+      const resp = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: intro, code: codeRef.current, history: hist }),
+      });
       if (!resp.body) throw new Error('无响应');
       const reader = resp.body.getReader(); const dec = new TextDecoder(); let buf = '';
       for (;;) { const { done, value } = await reader.read(); if (done) break; buf += dec.decode(value, { stream: true }); let i; while ((i = buf.indexOf('\n\n')) >= 0) { const b = buf.slice(0, i); buf = buf.slice(i + 2); if (b.trim()) handle(b); } }

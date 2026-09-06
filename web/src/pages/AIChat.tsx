@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Card, Input, Button, Space, Tag, App, Modal, Select, Typography, Alert, Divider, Tooltip, Spin, Badge } from 'antd';
-import { SendOutlined, SettingOutlined, RobotOutlined, UserOutlined, WarningOutlined } from '@ant-design/icons';
+import { SendOutlined, SettingOutlined, RobotOutlined, UserOutlined, WarningOutlined, DeleteOutlined } from '@ant-design/icons';
 import { api } from '../api';
 import Markdown from '../components/Markdown';
 
@@ -32,6 +32,22 @@ export default function AIChat() {
 
   const send = async (text: string) => {
     const t = text.trim(); if (!t || busy) return;
+    // 把已展示的对话转成可发给后端的多轮上下文(history)。
+    // 注意顺序:用户消息 -> assistant 文本 -> 该轮的每个工具返回(作为 user 消息,模拟后端内部[工具返回])。
+    const hist: { role: 'user' | 'assistant'; content: string }[] = [];
+    for (const m of msgs) {
+      if (m.role === 'user') { hist.push({ role: 'user', content: m.text }); continue; }
+      if (m.text) hist.push({ role: 'assistant', content: m.text });
+      for (const tk of (m.tools || [])) {
+        if (!tk || tk.running) continue;
+        const part: string[] = [];
+        if (tk.ok !== undefined) part.push(`[工具执行${tk.ok ? '成功' : '失败'} 主机=${tk.host || '-'} 退出码=${tk.code ?? '?'}]`);
+        if (tk.stdout) part.push('STDOUT:\n' + String(tk.stdout).slice(0, 3000));
+        if (tk.stderr) part.push('STDERR:\n' + String(tk.stderr).slice(0, 1500));
+        if (tk.error) part.push('错误: ' + tk.error);
+        if (part.length) hist.push({ role: 'user', content: part.join('\n') });
+      }
+    }
     const newMsgs: Msg[] = [...msgs, { role: 'user', text: t }, { role: 'ai', text: '', tools: [] }];
     setMsgs(newMsgs); setInput(''); setBusy(true);
     const ai = newMsgs[newMsgs.length - 1];
@@ -52,7 +68,11 @@ export default function AIChat() {
       } catch { /* ignore 单个坏帧 */ }
     };
     try {
-      const resp = await fetch('/api/ai/chat?message=' + encodeURIComponent(t));
+      const resp = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: t, history: hist }),
+      });
       if (!resp.ok || !resp.body) throw new Error('请求失败 HTTP ' + resp.status);
       const reader = resp.body.getReader();
       const dec = new TextDecoder();
@@ -93,7 +113,10 @@ export default function AIChat() {
             {cfg?.selected && <Tag>模型: {cfg.providers?.find((p: any) => p.id === cfg.selected.id)?.name} / {cfg.selected.model}</Tag>}
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>既是通用问答/编程助手（可问算法、K8s/Docker 原理等），需要时也会在主机上执行运维动作</Typography.Text>
           </Space>
-          <Button size="small" icon={<SettingOutlined />} onClick={() => setCfgOpen(true)}>AI 设置</Button>
+          <Space>
+            {msgs.length > 0 && <Button size="small" icon={<DeleteOutlined />} onClick={() => { setMsgs([]); message.info('已清空对话(上下文重置)'); }}>清空</Button>}
+            <Button size="small" icon={<SettingOutlined />} onClick={() => setCfgOpen(true)}>AI 设置</Button>
+          </Space>
         </div>
         <Divider style={{ margin: '6px 0 10px' }} />
         <div ref={listRef} style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -120,6 +143,8 @@ export default function AIChat() {
                     </Space>
                     {t.command && <pre style={{ background: '#f6f8fa', padding: 6, borderRadius: 6, margin: '6px 0', fontSize: 12, overflow: 'auto' }}>$ {t.command}</pre>}
                     {t.reason && <Typography.Text type="secondary" style={{ fontSize: 12 }}>原因: {t.reason}</Typography.Text>}
+                    {t.running && <Typography.Text type="secondary" style={{ fontSize: 12 }}>执行中…</Typography.Text>}
+                    {!t.running && !t.stdout && !t.error && <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t.ok ? '✓ 命令已执行（无输出，退出码 ' + (t.code ?? 0) + '）' : '（无输出，退出码 ' + (t.code ?? '?') + '）'}</Typography.Text>}
                     {t.stdout && <pre style={{ background: '#f6f8fa', padding: 6, borderRadius: 6, fontSize: 11, maxHeight: 200, overflow: 'auto', margin: 0 }}>{t.stdout}</pre>}
                     {t.error && <Alert type="error" message={t.error} style={{ marginTop: 4 }} />}
                   </Card>

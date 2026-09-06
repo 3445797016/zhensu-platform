@@ -5,6 +5,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import http from 'node:http';
 import https from 'node:https';
+import { StringDecoder } from 'node:string_decoder';
 
 export interface Provider {
   id: string;
@@ -104,12 +105,14 @@ function rawRequest(provider: Provider, body: string, signal?: AbortSignal): Pro
 }
 
 // 从 SSE 响应流中提取 content（忽略 reasoning_content 与注释）
+// 使用 StringDecoder 处理 UTF-8 多字节字符跨 TCP chunk 被切断导致的乱码
 function readSSE(res: http.IncomingMessage, onDelta?: (s: string) => void): Promise<string> {
   return new Promise((resolve, reject) => {
+    const dec = new StringDecoder('utf8');
     let buf = ''; let full = '';
     res.on('error', reject);
     res.on('data', (chunk: Buffer) => {
-      buf += chunk.toString('utf8');
+      buf += dec.write(chunk);
       let i;
       while ((i = buf.indexOf('\n')) >= 0) {
         const line = buf.slice(0, i); buf = buf.slice(i + 1);
@@ -125,7 +128,7 @@ function readSSE(res: http.IncomingMessage, onDelta?: (s: string) => void): Prom
 }
 
 function readAll(res: http.IncomingMessage): Promise<string> {
-  return new Promise((resolve, reject) => { let s = ''; res.on('error', reject); res.on('data', (c: Buffer) => (s += c.toString('utf8'))); res.on('end', () => resolve(s)); });
+  return new Promise((resolve, reject) => { const dec = new StringDecoder('utf8'); let s = ''; res.on('error', reject); res.on('data', (c: Buffer) => (s += dec.write(c))); res.on('end', () => { s += dec.end(); resolve(s); }); });
 }
 
 export async function chat(provider: Provider, messages: { role: string; content: string }[], opts: { stream?: boolean; onDelta?: (s: string) => void; signal?: AbortSignal; temperature?: number; maxTokens?: number } = {}): Promise<string> {
