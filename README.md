@@ -31,19 +31,28 @@
 
 | 模块 | 说明 |
 | --- | --- |
-| 📊 **总览 Dashboard** | 主机 / Agent / Docker / K8s / 工具 / 告警全局状态一屏尽览 |
+| 📊 **总览 Dashboard** | 主机 / Agent / Docker / K8s / 工具 / 告警全局状态一屏尽览;含平台健康度、动态趋势、安全态势,自动刷新 |
 | 🤖 **Agent 管理** | 扫描本机 pi / opencode 等 Agent 进程、模型、会话 |
 | 🖥 **宿主机 / VM** | 多主机 CRUD、WebSocket 交互终端、命令执行、系统指标、SSH 密码/私钥/sudo、连接测试 |
 | 🧰 **Linux 管理** | systemd 服务启停/自启、进程查看/结束、cron 在线编辑、监听端口 |
 | 🐳 **Docker** | 容器/镜像/卷/网络管理、实时 stats、日志、一键启停删 |
 | ☸️ **Kubernetes** | 集群看板(节点/命名空间/事件)、资源浏览、**Monaco 在线 YAML** 应用、伸缩/重启/日志、Pod 下钻 |
-| ⚙️ **中间件 / 工具库** | 30+ 常见组件(MySQL/Redis/ES/Kafka/…),**未装给指引、装好自动识别**,多数支持**一键 Docker 部署** |
-| 🚀 **DevOps 流水线** | 多步脚本/变量/失败策略、发布记录、脚本库、环境管理 |
-| 📈 **监控 / 告警** | 主机指标**动态可视化**(动画仪表 + 近 48 次趋势)、CPU>90%/内存>90%/磁盘>80% 自动告警、事件流、进程→线程下钻 |
+| ⚙️ **中间件 / 工具库** | 30+ 常见组件(MySQL/Redis/ES/Kafka/…),**未装给指引、装好自动识别**,多数支持**一键 Docker 部署**;含**渗透测试/靶场分类**(DVWA/WebGoat/… 一键部署) |
+| 🗄 **数据库中心** | 关系型(MySQL/PG/ClickHouse/SQLite)+ NoSQL(Redis/MongoDB)+ **向量库(Qdrant/Chroma)**,图形化操作 + 命令台双模式;**一键扫描/接入本机实例**、库元数据(大小/表数/字符集)体检 |
+| 🛡 **网络安全** | 20+ 安全工具集成(nmap/rustscan/masscan/whatweb/nikto/gobuster/ffuf/nuclei/sqlmap/hydra…),Web/审计/基线分组;**靶机中心**(容器+主机资产、实时资源、日志、双向文件传输)、**本地靶机库**(添加/移除/**自动周期扫描**/结果留存/历史抽屉)、安全能力健康度与执行记录 |
+| 📁 **文件管理** | 本机 + SSH 主机:目录浏览、在线编辑、上传/下载、新建/改名/删除、chmod、打包 |
+| 🌐 **网站管理** | nginx 虚拟主机(静态/反代)创建/编辑/启停,**负载均衡 / 防盗链 / 静态缓存 / gzip / 上传限制 / 限流 / 强制 HTTPS / SSL 证书**,`nginx -t` 校验热重载 |
+| 🧱 **防火墙** | 端口放行/IP 封禁/监听服务识别/INPUT 默认策略/流量统计,宝塔级交互;防锁死提示 |
+| 💾 **备份中心** | 目录/库定时备份(tar.gz),挂接任务中心,保留策略 |
+| 📋 **访问日志** | 站点访问日志统计(Web 访问日志可视化) |
+| 🗂 **任务中心** | 通用后台任务(Shell 任务实时日志),定时调度,失败记录 |
+| 🚀 **DevOps 流水线** | 多步脚本/变量/失败策略、发布记录、脚本库、环境管理;**CI/CD 工具链**:本地 Git + Jenkins/SonarQube/Nexus/Gitea 一键编排、代码扫描、制品仓库 |
+| 📈 **监控 / 告警** | 主机指标**动态可视化**(动画仪表 + 近 48 次趋势)、CPU>90%/内存>90%/磁盘>80% 自动告警、事件流、进程→线程下钻;**消息铃铛收告警** |
 | 💬 **AI 智能运维** | SSE 流式对话,**自动调工具在主机上执行运维命令**(危险命令拦截);也支持通用问答/编程解答 |
 | 🖊 **在线编程** | 本地编译/解释 8 种语言(C/C++/Rust/Java/Python/JS/TS/R),浏览器里写代码、喂 stdin、看输出 |
 | 📚 **算法题库 + 解题页** | 随想录体系 37 题 / 13 类算法,力扣式界面:**左侧题目 + 右侧编辑器**,题解可看/可藏、含图解,一键运行 |
 | 🧠 **本地知识库 RAG** | 离线扫描目录(PDF/TXT/MD)→ 切块 → 倒排索引 → AI 问答自动检索引用,**无需联网 embedding** |
+| 🔐 **登录认证 / 审计** | 账号+密码登录、24h 会话、同 IP 连续失败锁定防爆破、Cookie 安全属性;账户中心(昵称/头像/改密/退出)、消息铃铛;**全站写操作审计留痕**;CORS 可按 `WEB_ORIGIN` 限制来源 |
 
 ## 🧱 技术栈
 
@@ -133,13 +142,18 @@ cd server && npm run dev        # 或 pm2 / nohup / systemd 托管
 | `LOG` | `info` | Fastify 日志级别 |
 | `OPSHUB_TMP` | 自动选择 | 在线编程临时目录(可执行);自动规避 `/tmp` 的 noexec 场景 |
 | `KB_PATH` / 页面设置 | 可配 | 本地知识库根目录(可在「知识库 RAG」页修改并重建索引) |
+| `WEB_ORIGIN` | 空 | CORS 允许来源(逗号分隔),设后仅放行白名单来源 |
 
 ## ⚙️ 配置说明
 
 - **AI 对话**:自动读取本机 `~/.pi/agent/auth.json` 中已认证的 key(deepseek / kimi-coding / zai-coding-cn),也可在「AI 智能运维 → AI 设置」手动填 key / baseURL / model;支持 OpenAI 兼容厂商与本地 ollama。
-- **监控告警**:在「监控/告警 → 监控配置」调整 CPU / 内存 / 磁盘阈值(默认 90 / 90 / 80),超阈值自动产生告警与事件。
+- **登录认证**:默认超级管理员 `root`(密码在首次启动生成的配置中设置,可在「系统 → 登录/API」修改);登录会话 24 小时,同 IP 连续失败自动锁定。
+- **监控告警**:在「监控/告警 → 监控配置」调整 CPU / 内存 / 磁盘阈值(默认 90 / 90 / 80),超阈值自动产生告警与事件,右上角铃铛实时提醒。
+- **网络安全**:工具均通过本机已有 CLI 封装(nmap/rustscan/masscan/…),**仅对已纳管主机或已授权靶机执行**;Web/SMB 等扫描按钮请只对自有靶机使用。
+- **数据库中心**:支持三种接入方式 —— Docker 容器自动识别(免账号)、本机监听端口发现、手动填连接串;向量库为后续语义检索 / RAG / 推荐等 ML 能力预留。
 - **知识库 RAG**:默认扫描 `~/Desktop/knowledge`(可用 `KB_PATH` 或页面设置覆盖);索引为纯本地倒排文件,**不依赖外部 embedding 服务**。
 - **Kubernetes**:直接复用本机 kubectl 与 kubeconfig(含 `KUBECONFIG` 环境变量),可接 k3s/云集群。
+- **WEB_ORIGIN**:跨域来源白名单(逗号分隔),不设则默认放行同源/常见本地端口。
 
 ## 📁 项目结构
 
@@ -148,14 +162,14 @@ cd server && npm run dev        # 或 pm2 / nohup / systemd 托管
 ├── server/                 # Fastify 后端
 │   ├── src/
 │   │   ├── index.ts        # 入口:路由注册、静态托管
-│   │   ├── routes/         # hosts/docker/tools/k8s/ai/devops/monitoring/code/problems…
+│   │   ├── routes/         # hosts/docker/tools/k8s/ai/devops/monitoring/code/problems/sec/files/auth/websites/firewall/backup/database/targets/seclab/jenkins/devops-ci/build-tools…
 │   │   ├── lib/            # llm 网关、ssh/exec、代码运行器、JSON store…
-│   │   ├── modules/        # kb(RAG)、tools(工具库探测/部署)…
+│   │   ├── modules/        # kb(RAG)、tools(工具库探测/部署)、tasks(任务中心)、toolchain(CI 工具链)…
 │   │   └── data/           # 运行时数据(JSON + kb 缓存)——已被 .gitignore,勿提交
 │   └── package.json
 ├── web/                    # React 前端
-│   ├── src/pages/          # 各功能页(含 problems 题库列表、Solve 力扣式解题页)
-│   ├── src/components/     # 终端、Markdown、AI 助手等
+│   ├── src/pages/          # 各功能页(Dashboard/Monitoring/SecurityPage/DatabaseCenter/FilesPage/Websites/Firewall/BackupCenter/TaskCenter/DevOpsCI/…)
+│   ├── src/components/     # 终端、Markdown、AI 助手、AccountCenter、TargetCenter、SecTargets 等
 │   └── package.json
 ├── problems/               # 算法题库静态资源(可扩展:放 .md + 登记 index.json)
 ├── start.sh                # systemd 辅助脚本(可选)
@@ -225,10 +239,14 @@ cd server && npm run dev        # 或 pm2 / nohup / systemd 托管
 
 ## 🗺 Roadmap
 
-- [ ] 登录 / 多用户与操作审计(高危命令二次确认)
-- [ ] 指标存储历史化 + 趋势拉长(按天归档)
+- [x] 登录 / 会话 / 防爆破与全站操作审计
+- [x] 网络安全工具集 + 靶机中心 + 本地靶机库自动扫描
+- [x] 数据库中心(关系型 + NoSQL + 向量库,图形化 + 命令)
+- [x] 网站管理 / 防火墙 / 备份 / 任务中心 / 访问日志(面板级能力)
 - [ ] 通知渠道(钉钉/飞书/邮件/Webhook)告警
+- [ ] 指标存储历史化 + 趋势拉长(按天归档)
 - [ ] 代码运行沙箱化(容器/隔离)
+- [ ] 多用户与角色权限(RBAC)
 - [ ] OpenAPI 导出与 CLI
 
 ## 📄 License
