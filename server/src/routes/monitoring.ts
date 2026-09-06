@@ -8,6 +8,7 @@ import { Host, run } from '../lib/host.js';
 const EV = 'events';
 const AL = 'alerts';
 import { notify } from '../modules/notify.js';
+import { histAppend, histQuery, pruneHistory } from '../modules/metrics.js';
 const SVC = 'services'; // 被监控的外部服务
 const CFG = 'monitor';
 
@@ -115,10 +116,21 @@ export async function register(fastify: FastifyInstance) {
       } catch (e: any) { results.push({ hostId: h.id, hostName: h.name, error: String(e), time: new Date().toISOString() }); }
     }
     store.write('metrics-' + sampleId, results);
+    store.write('metrics-latest', results);
+    for (const m of results) histAppend(m);
     return results;
   });
 
   fastify.get('/monitor/metrics/:sampleId', (req) => store.read('metrics-' + (req.params as any).sampleId, []));
+
+  // 历史趋势
+  fastify.get('/monitor/history', (req) => {
+    const q = req.query as any;
+    const hostId = String(q.host || '');
+    const hours = Math.max(1, Math.min(24 * Number(q.days || 1), Number(q.hours || 24)));
+    const to = Date.now(); const from = to - hours * 3600e3;
+    return { hostId, from, to, points: hostId ? histQuery(hostId, from, to, 720) : [] };
+  });
 
   function recordAlert(kind: string, h: Host, val: string, msg: string) {
     const alerts = store.list(AL);
@@ -142,6 +154,10 @@ function pushAlert(kind: string, h: Host, val: string, msg: string) {
   }
 }
 
+let pruned = false;
+function pruneOnce() { if (!pruned) { pruned = true; pruneHistory(14); } }
+pruneOnce();
+
 let started = false;
 function startScheduler() {
   if (started) return;
@@ -152,14 +168,18 @@ function startScheduler() {
       if (!cfg.monitoredHostIds?.length) return;
       const hosts = store.list<Host>('hosts').filter((h) => cfg.monitoredHostIds?.includes(h.id));
       (async () => {
+        const latest: any[] = [];
         for (const h of hosts) {
           try {
             const m = await checkHost(h);
+            m.hostId = h.id; m.hostName = h.name; m.time = new Date().toISOString();
+            latest.push(m); histAppend(m);
             const th = cfg.thresholds || {};
             if ((Number(m.diskMaxPct ?? m.diskUse) || 0) > (th.disk || 80)) pushAlert('disk', h, `${m.diskMaxPct ?? m.diskUse}%`, `磁盘 ${m.diskMaxPct ?? m.diskUse}% 超 ${th.disk || 80}%`);
             if ((m.memPct || 0) > (th.mem || 90)) pushAlert('memory', h, `${m.memPct}%`, `内存 ${m.memPct}% 超 ${th.mem || 90}%`);
           } catch {}
         }
+        if (latest.length) store.write('metrics-latest', latest);
       })();
     } catch {}
   }, 15000);

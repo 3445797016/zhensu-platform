@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Card, Tabs, Table, Tag, Space, Button, Select, App, Switch, InputNumber, Form,
-  Timeline, Alert, Badge, Row, Col, Divider, Tooltip,
+  Timeline, Alert, Badge, Row, Col, Divider, Tooltip, Typography,
 } from 'antd';
 import {
   ApiOutlined, CloudServerOutlined, DashboardOutlined, DesktopOutlined, FieldTimeOutlined,
@@ -10,10 +10,13 @@ import {
 import { api } from '../api';
 import { Processes } from '../components/HostOps';
 
+const Text = Typography.Text;
+
 export default function Monitoring() {
   return (
     <Tabs defaultActiveKey="host" items={[
       { key: 'host', label: '📊 主机指标', children: <HostMetrics /> },
+      { key: 'history', label: '📈 历史趋势', children: <HistoryTrend /> },
       { key: 'proc', label: '实时进程 / 线程', children: <ProcessMonitor /> },
       { key: 'alerts', label: '告警中心', children: <Alerts /> },
       { key: 'events', label: '事件流', children: <Events /> },
@@ -322,4 +325,93 @@ function Config() {
       <Form.Item><Button type="primary" htmlType="submit">保存</Button></Form.Item>
     </Form>
   </Card>;
+}
+
+/* ============ 历史趋势(指标历史化) ============ */
+function HistoryTrend() {
+  const [hosts, setHosts] = useState<any[]>([]);
+  const [host, setHost] = useState('');
+  const [days, setDays] = useState(1);
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const loadHosts = async () => {
+    try {
+      const c = await api.get('/monitor/config');
+      const m = await api.get('/monitor/metrics/latest');
+      const arr = (m || []).map((x: any) => ({ id: x.hostId, name: x.hostName || x.hostId }));
+      if (c?.monitoredHostIds?.length && !arr.length) {
+        const h = await api.get('/hosts');
+        setHosts((h || []).filter((x: any) => c.monitoredHostIds.includes(x.id)).map((x: any) => ({ id: x.id, name: x.name })));
+      } else setHosts(arr);
+      if (arr[0]) setHost(arr[0].id);
+    } catch { /* */ }
+  };
+  const load = async (hid = host, dd = days) => {
+    if (!hid) return;
+    setLoading(true);
+    try { setData(await api.get(`/monitor/history?host=${encodeURIComponent(hid)}&days=${dd}`)); }
+    catch { /* */ }
+    setLoading(false);
+  };
+  useEffect(() => { loadHosts(); }, []);
+  useEffect(() => { if (host) load(); }, [host, days]);
+
+  const charts: any[] = [];
+  if (data?.points?.length) {
+    const pts = data.points;
+    charts.push({ name: 'CPU', color: '#2f6bff', unit: '%', key: 'cpu' });
+    charts.push({ name: '内存', color: '#13c2c2', unit: '%', key: 'mem' });
+    charts.push({ name: '磁盘', color: '#52c41a', unit: '%', key: 'disk' });
+  }
+  return (
+    <Card size="small" title={<Space><LineChartOutlined />历史趋势 <Tag>JSONL 按天落盘 · 保留 14 天</Tag></Space>}
+      extra={<Space>
+        <span>主机:</span>
+        <Select style={{ width: 200 }} value={host} onChange={setHost} options={hosts.map((h) => ({ value: h.id, label: h.name }))} placeholder="选择主机" />
+        <Select style={{ width: 110 }} value={days} onChange={setDays} options={[{ value: 1, label: '近 24 小时' }, { value: 3, label: '近 3 天' }, { value: 7, label: '近 7 天' }, { value: 14, label: '近 14 天' }]} />
+      </Space>}>
+      {!host && <Alert type="info" showIcon message="暂无被监控主机。请到「监控配置」选择主机开始采集,趋势数据会自动积累。" />}
+      {charts.length === 0 && host && <Alert type="info" showIcon message="该主机暂无历史数据。采集开启后每轮自动记录(默认每 15 秒)。" />}
+      {charts.map((c) => (
+        <div key={c.key} style={{ marginBottom: 16 }}>
+          <Space style={{ marginBottom: 4 }}><b style={{ fontSize: 13 }}>{c.name}</b><Text type="secondary" style={{ fontSize: 11 }}>近 {days * 24} 小时</Text></Space>
+          <SparkLine pts={data.points} color={c.color} get={(p: any) => p[c.key]} />
+        </div>
+      ))}
+      {data?.points?.length > 0 && <Text type="secondary" style={{ fontSize: 11 }}>共 {data.points.length} 个采样点 · 打开监控页或启用定时采集后持续积累</Text>}
+    </Card>
+  );
+}
+
+function SparkLine({ pts, color, get }: { pts: any[]; color: string; get: (p: any) => number }) {
+  const W = 900, H = 140, P = 8;
+  const vals = pts.map(get).map((v: any) => (v == null || v < 0 ? 0 : Math.min(100, v)));
+  if (vals.length < 2) return <Alert type="info" showIcon message="数据点不足,暂无法绘图" />;
+  const max = Math.max(100, ...vals);
+  const step = (W - P * 2) / (vals.length - 1);
+  const path = vals.map((v: number, i: number) => `${i === 0 ? 'M' : 'L'}${(P + i * step).toFixed(1)},${(H - P - (v / max) * (H - P * 2)).toFixed(1)}`).join(' ');
+  const area = `${path} L${(W - P).toFixed(1)},${H - P} L${P},${H - P} Z`;
+  // x 轴时间刻度(最多 6 个)
+  const ticks: any[] = [];
+  const n = pts.length;
+  const tickCount = Math.min(6, n);
+  for (let i = 0; i < tickCount; i++) { const idx = Math.round((i * (n - 1)) / Math.max(1, tickCount - 1)); ticks.push({ x: P + idx * step, label: new Date(pts[idx].t).toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' }) }); }
+  const last = vals[vals.length - 1];
+  return (
+    <div style={{ border: '1px solid #eee', borderRadius: 8, background: '#fff', padding: 4 }}>
+      <svg viewBox={`0 0 ${W} ${H + 18}`} style={{ width: '100%', height: 'auto' }}>
+        <defs>
+          <linearGradient id={`g${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        {[0, 25, 50, 75, 100].map((g) => { const y = (H - P - (g / max) * (H - P * 2)); return <g key={g}><line x1={P} y1={y} x2={W - P} y2={y} stroke="#eee" strokeDasharray="3 3" /><text x={2} y={y + 3} fill="#999" fontSize="10">{g}%</text></g>; })}
+        <path d={area} fill={`url(#g${color.replace('#', '')})`} />
+        <path d={path} fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
+        <circle cx={P + (n - 1) * step} cy={(H - P - (last / max) * (H - P * 2))} r="3.2" fill={color} />
+        {ticks.map((t, i) => <text key={i} x={t.x} y={H + 12} fill="#999" fontSize="10" textAnchor="middle">{t.label}</text>)}
+      </svg>
+    </div>
+  );
 }
