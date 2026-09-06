@@ -35,6 +35,7 @@ import { register as targets } from './routes/targets.js';
 import { register as seclab } from './routes/seclab.js';
 import { register as tasksApi } from './modules/tasks.js';
 import { register as ansible } from './routes/ansible.js';
+import { sessionUser } from './routes/auth.js';
 import { register as notify } from './routes/notify.js';
 import { register as report } from './routes/report.js';
 import { store } from './lib/store.js';
@@ -55,7 +56,8 @@ app.get('/api/health', async () => ({
   status: 'ok', uptime: process.uptime(), time: new Date().toISOString(),
 }));
 
-// 登录守卫(可选):开启安全后,除 /api/auth/*、/api/open/*、/api/health 外都需会话 cookie
+// 登录守卫(可选)+ RBAC:开启安全后,除 /api/auth/*、/api/open/*、/api/health 外都需会话 cookie;
+// viewer(只读)角色禁止一切写操作与“写型 GET”(如触发采集)
 app.addHook('onRequest', (req, reply, done) => {
   const secCfg = store.read<any>('security', {});
   const u = req.url || '';
@@ -63,11 +65,14 @@ app.addHook('onRequest', (req, reply, done) => {
   if (u.startsWith('/api/auth/') || u.startsWith('/api/open/') || u === '/api/health' || req.method === 'OPTIONS') return done();
   const m = String(req.headers.cookie || '').match(/zs_sess=([^;]+)/);
   const tok = m ? decodeURIComponent(m[1]) : '';
-  // Session entries store their ISO expiration.  Checking only key presence
-  // would keep a persisted session valid indefinitely after its 3-day TTL.
-  const expiresAt = tok ? secCfg.sessions?.[tok] : undefined;
-  if (expiresAt && Number.isFinite(Date.parse(expiresAt)) && Date.parse(expiresAt) > Date.now()) return done();
-  reply.code(401).send({ error: '未登录' });
+  const user = tok ? sessionUser(secCfg, tok) : null;
+  if (!user) { reply.code(401).send({ error: '未登录' }); return done(); }
+  if (user.role === 'viewer') {
+    const isWrite = !['GET', 'HEAD'].includes(req.method);
+    const writeGet = ['/api/monitor/collect'].includes(u.split('?')[0]);
+    if (isWrite || writeGet) { reply.code(403).send({ error: '只读账号无权执行该操作' }); return done(); }
+  }
+  return done();
 });
 
 for (const m of [hosts, docker, tools, agents, k8s, ai, devops, devopsCi, jenkins, buildTools, monitoring, ops, linux, code, kb, problems, sec, files, auth, admin, websites, firewall, backup, weblog, database, targets, seclab, tasksApi, ansible, notify, report]) await app.register(m, { prefix: '/api' });

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Tabs, Card, Table, Tag, Space, Input, Button, Switch, Alert, message, Typography, Divider, Select, Popconfirm, Popover } from 'antd';
+import { Tabs, Card, Table, Tag, Space, Input, Button, Switch, Alert, message, Typography, Divider, Select, Popconfirm, Popover, Modal } from 'antd';
 import { SafetyOutlined, KeyOutlined, AuditOutlined, ReloadOutlined, LogoutOutlined, BellOutlined, PlusOutlined, SendOutlined, DeleteOutlined, SaveOutlined } from '@ant-design/icons';
 import { api } from '../api';
 
@@ -60,31 +60,87 @@ function ApiTab() {
 function SecTab() {
   const [status, setStatus] = useState<any>({ enabled: false });
   const [pwd, setPwd] = useState('');
-  const [oldPwd, setOldPwd] = useState('');
+  const [users, setUsers] = useState<any[]>([]);
+  const [root, setRoot] = useState('root');
+  const [um, setUm] = useState(false);            // 新增弹窗
+  const [edit, setEdit] = useState<any>(null);    // 编辑/重置
+  const [nf, setNf] = useState<any>({});          // 新用户表单
+  const me = status?.me;
+  const isAdmin = me?.role === 'admin';
   const load = () => api.get('/auth/status').then(setStatus);
+  const loadUsers = async () => { if (isAdmin) { try { const d = await api.get('/auth/users'); setUsers(d.users || []); setRoot(d.root || 'root'); } catch { /* */ } } };
   useEffect(() => { load(); }, []);
+  useEffect(() => { loadUsers(); }, [status?.me?.username]);
   const setup = async (enabled: boolean) => {
     try {
       if (!pwd && enabled) return message.warning('请先填写新密码');
-      const r = await api.post('/auth/setup', { password: pwd, oldPassword: oldPwd || undefined, enabled });
-      message.success(r.enabled ? '已启用登录保护' : '已关闭(回到开放模式)'); setPwd(''); setOldPwd(''); load();
-    } catch (e: any) { message.error(e.message); }
+      const r = await api.post('/auth/setup', { password: pwd, oldPassword: undefined, enabled });
+      message.success(r.enabled ? '已启用登录保护' : '已关闭(回到开放模式)'); setPwd(''); load(); loadUsers();
+    } catch (e: any) { message.error(e?.message || String(e)); }
   };
+  const addUser = async () => {
+    if (!nf.username || nf.password?.length < 6) return message.warning('用户名与 ≥6 位密码必填');
+    try { await api.post('/auth/users', { ...nf }); message.success('已添加'); setUm(false); setNf({}); loadUsers(); }
+    catch (e: any) { message.error(e?.message || String(e)); }
+  };
+  const upd = async (u: any) => {
+    try { await api.put('/auth/users/' + encodeURIComponent(u.username), u); message.success('已更新'); loadUsers(); setEdit(null); }
+    catch (e: any) { message.error(e?.message || String(e)); }
+  };
+  const cols = [
+    { title: '用户名', dataIndex: 'username' },
+    { title: '昵称', dataIndex: 'nickname' },
+    { title: '角色', width: 130, render: (_: any, r: any) => (
+      <Select size="small" value={r.role} onChange={(v) => upd({ ...r, role: v })}
+        options={[{ value: 'admin', label: '管理员' }, { value: 'viewer', label: '只读' }]} disabled={r.username === root} />) },
+    { title: '启用', width: 80, render: (_: any, r: any) => <Switch size="small" checked={!!r.enabled} onChange={(v) => upd({ ...r, enabled: v })} disabled={r.username === root} /> },
+    { title: '创建', width: 150, dataIndex: 'createdAt', render: (v: string) => new Date(v).toLocaleString('zh-CN', { hour12: false }) },
+    { title: '操作', width: 170, render: (_: any, r: any) => (r.username === root
+      ? <Tag>超级管理员</Tag>
+      : <Space>
+        <Button size="small" onClick={() => setEdit({ ...r, password: '' })}>重置密码</Button>
+        <Popconfirm title="删除该用户?" onConfirm={async () => { try { await api.del('/auth/users/' + encodeURIComponent(r.username)); loadUsers(); } catch (e: any) { message.error(e?.message || String(e)); } }}><Button size="small" danger>删除</Button></Popconfirm>
+      </Space>) },
+  ];
   return (
-    <Card size="small" title={<Space><SafetyOutlined /><b>登录安全</b>{status.enabled ? <Tag color="green">已启用</Tag> : <Tag>未启用</Tag>}</Space>}>
+    <Card size="small" title={<Space><SafetyOutlined /><b>登录安全与用户</b>{status.enabled ? <Tag color="green">已启用</Tag> : <Tag>未启用</Tag>}{me ? <Tag color={isAdmin ? 'gold' : 'default'}>{me.username} · {isAdmin ? '管理员' : '只读'}</Tag> : null}</Space>}>
       <Space direction="vertical" style={{ width: '100%' }} size={10}>
         <Alert type={status.enabled ? 'success' : 'warning'} showIcon
-          message={status.enabled ? '已开启:全站 API 需登录会话(除 /auth 与 /open)。同 IP 连续失败 5 次将锁定 5 分钟。' : '当前为开放模式(默认)。建议设置口令并启用,尤其是暴露到公网时。'} />
-        <Space><span style={{ width: 80 }}>新密码</span><Input.Password value={pwd} onChange={(e) => setPwd(e.target.value)} placeholder="≥6 位" style={{ width: 240 }} /></Space>
-        {status.enabled && <Space><span style={{ width: 80 }}>当前密码</span><Input.Password value={oldPwd} onChange={(e) => setOldPwd(e.target.value)} placeholder="修改需验证当前密码" style={{ width: 240 }} /></Space>}
+          message={status.enabled ? '已开启:全站 API 需登录会话。管理员可读写全部;只读账号仅可查看,写操作一律拒绝。同 IP 连续失败 5 次锁 5 分钟。' : '当前为开放模式(默认)。建议设置口令并启用,尤其是暴露到公网时。'} />
+        {!isAdmin && me ? <Alert type="info" showIcon message="当前为只读账号:可浏览面板,但无法执行任何修改操作(增删改/运行/部署等)。需要权限请联系管理员。" /> : null}
+        {isAdmin && <>
+          <Divider style={{ margin: '4px 0' }} />
+          <Space wrap>
+            <span style={{ fontWeight: 600 }}>超级管理员({root})</span>
+            <Input.Password style={{ width: 220 }} value={pwd} onChange={(e) => setPwd(e.target.value)} placeholder={status.enabled ? '新密码(可选,留空则仅切换开关)' : '设置密码(≥6 位)'} />
+            <Button type="primary" onClick={() => setup(true)} disabled={status.enabled}>已启用(改密)</Button>
+            {!status.enabled && <Button type="primary" onClick={() => setup(true)}>设置并启用保护</Button>}
+            {status.enabled && <Button onClick={() => setup(false)}>关闭保护(开放)</Button>}
+          </Space>
+          <Divider style={{ margin: '4px 0' }} />
+          <Space style={{ justifyContent: 'space-between', width: '100%' }}>
+            <b>成员管理({users.length + 1})</b>
+            <Button icon={<PlusOutlined />} onClick={() => { setNf({ role: 'viewer', enabled: true }); setUm(true); }}>添加用户</Button>
+          </Space>
+          <Table size="small" rowKey="username" dataSource={[{ username: root, nickname: '超级管理员', role: 'admin', enabled: true }, ...users]} columns={cols as any} pagination={false} />
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>角色说明:管理员=全部权限;只读=仅浏览(写请求与服务端双重拦截)。危险操作仍保留二次确认。</Typography.Text>
+        </>}
         <Space>
-          <Button type="primary" onClick={() => setup(true)} disabled={status.enabled}>启用登录保护</Button>
-          {status.enabled && <Button onClick={() => setup(false)} disabled={!oldPwd}>关闭保护</Button>}
-          <Button danger onClick={async () => { await api.post('/auth/logout'); message.success('已退出'); }}>退出登录</Button>
+          <Button danger onClick={async () => { await api.post('/auth/logout'); message.success('已退出'); setTimeout(() => location.reload(), 300); }}>退出登录</Button>
         </Space>
-        <Divider />
-        <Typography.Text type="secondary" style={{ fontSize: 12 }}>说明:会话 Cookie(HttpOnly,3 天)由后端管理;未来可扩展多用户/角色/二次验证。危险操作(网络安全 danger 工具、删除等)仍保留二次确认。</Typography.Text>
       </Space>
+
+      <Modal title="添加用户" open={um} onCancel={() => setUm(false)} onOk={addUser} okText="添加" width={460}>
+        <Space direction="vertical" style={{ width: '100%' }}>
+          <Space><span style={{ width: 70 }}>用户名</span><Input value={nf.username} onChange={(e) => setNf({ ...nf, username: e.target.value })} placeholder="2-32 位字母/数字._-" style={{ width: 240 }} /></Space>
+          <Space><span style={{ width: 70 }}>昵称</span><Input value={nf.nickname} onChange={(e) => setNf({ ...nf, nickname: e.target.value })} style={{ width: 240 }} /></Space>
+          <Space><span style={{ width: 70 }}>密码</span><Input.Password value={nf.password} onChange={(e) => setNf({ ...nf, password: e.target.value })} placeholder="≥6 位" style={{ width: 240 }} /></Space>
+          <Space><span style={{ width: 70 }}>角色</span><Select style={{ width: 240 }} value={nf.role} onChange={(v) => setNf({ ...nf, role: v })} options={[{ value: 'admin', label: '管理员' }, { value: 'viewer', label: '只读(仅查看)' }]} /></Space>
+        </Space>
+      </Modal>
+      <Modal title={'重置密码: ' + (edit?.username || '')} open={!!edit} onCancel={() => setEdit(null)} onOk={() => edit?.password?.length >= 6 ? upd(edit) : message.warning('新密码至少 6 位')} okText="重置" width={400}>
+        <Input.Password value={edit?.password || ''} onChange={(e) => setEdit({ ...edit, password: e.target.value })} placeholder="新密码(≥6 位)" />
+      </Modal>
     </Card>
   );
 }
