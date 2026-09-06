@@ -34,6 +34,7 @@ import { register as database } from './routes/database.js';
 import { register as targets } from './routes/targets.js';
 import { register as seclab } from './routes/seclab.js';
 import { register as tasksApi } from './modules/tasks.js';
+import { register as ansible } from './routes/ansible.js';
 import { store } from './lib/store.js';
 
 // 确保本机默认可作为被纳管的 Linux 主机
@@ -67,7 +68,7 @@ app.addHook('onRequest', (req, reply, done) => {
   reply.code(401).send({ error: '未登录' });
 });
 
-for (const m of [hosts, docker, tools, agents, k8s, ai, devops, devopsCi, jenkins, buildTools, monitoring, ops, linux, code, kb, problems, sec, files, auth, admin, websites, firewall, backup, weblog, database, targets, seclab, tasksApi]) await app.register(m, { prefix: '/api' });
+for (const m of [hosts, docker, tools, agents, k8s, ai, devops, devopsCi, jenkins, buildTools, monitoring, ops, linux, code, kb, problems, sec, files, auth, admin, websites, firewall, backup, weblog, database, targets, seclab, tasksApi, ansible]) await app.register(m, { prefix: '/api' });
 
 // 托管前端构建产物（存在则提供）
 const webDist = join(__dirname, '..', '..', 'web', 'dist');

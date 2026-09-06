@@ -4,6 +4,7 @@ import { PlusOutlined, PlayCircleOutlined, DeleteOutlined, CodeOutlined } from '
 import MonacoEditor from '@monaco-editor/react';
 import { api } from '../api';
 import DevOpsToolchain from './DevOpsCI';
+import AnsiblePage from './Ansible';
 
 export default function DevOps() {
   return (
@@ -13,6 +14,7 @@ export default function DevOps() {
       { key: 'scripts', label: '脚本库', children: <Scripts /> },
       { key: 'env', label: '环境管理', children: <Envs /> },
       { key: 'cicd', label: 'CI/CD 工具链', children: <DevOpsToolchain /> },
+      { key: 'ansible', label: 'Ansible 自动化', children: <AnsiblePage /> },
     ]} />
   );
 }
