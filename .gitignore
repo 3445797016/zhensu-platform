@@ -21,3 +21,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# monaco 本地运行时文件(由 copy-monaco 从 node_modules 生成)
+web/public/monaco/

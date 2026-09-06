@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "copy-monaco": "node scripts/copy-monaco.mjs",
+    "prebuild": "npm run copy-monaco",
+    "predev": "npm run copy-monaco"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.2",
