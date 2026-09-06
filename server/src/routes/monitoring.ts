@@ -7,6 +7,7 @@ import { Host, run } from '../lib/host.js';
 
 const EV = 'events';
 const AL = 'alerts';
+import { notify } from '../modules/notify.js';
 const SVC = 'services'; // 被监控的外部服务
 const CFG = 'monitor';
 
@@ -125,11 +126,20 @@ export async function register(fastify: FastifyInstance) {
     if (!dup) {
       store.upsert(AL, { id: randomUUID(), kind, hostId: h.id, hostName: h.name, value: val, message: msg, time: new Date().toISOString(), ack: false });
       emit(kind, { host: h.name, val, msg });
+      notify(`告警:${h.name} ${kind}`, `${msg} (值 ${val})`);
     }
   }
 
   // ---- 定时采集（进程存活期）
   startScheduler();
+}
+
+function pushAlert(kind: string, h: Host, val: string, msg: string) {
+  const list = store.list(AL);
+  if (!list.find((a: any) => a.hostId === h.id && a.kind === kind && !a.ack && (Date.now() - Date.parse(a.time || 0)) < 10 * 60 * 1000)) {
+    store.upsert(AL, { id: randomUUID(), kind, hostId: h.id, hostName: h.name, value: val, message: msg, time: new Date().toISOString(), ack: false });
+    notify(`${msg} (${h.name})`, `${msg} · 值 ${val} · 主机 ${h.name} @ ${new Date().toISOString()}`);
+  }
 }
 
 let started = false;
@@ -146,8 +156,8 @@ function startScheduler() {
           try {
             const m = await checkHost(h);
             const th = cfg.thresholds || {};
-            if ((Number(m.diskMaxPct ?? m.diskUse) || 0) > (th.disk || 80)) { const list = store.list(AL); if (!list.find((a: any) => a.hostId === h.id && a.kind === 'disk' && !a.ack)) store.upsert(AL, { id: randomUUID(), kind: 'disk', hostId: h.id, hostName: h.name, value: `${m.diskMaxPct ?? m.diskUse}%`, message: `磁盘 ${m.diskMaxPct ?? m.diskUse}% 超 ${th.disk || 80}%`, time: new Date().toISOString(), ack: false }); }
-            if ((m.memPct || 0) > (th.mem || 90)) { const list = store.list(AL); if (!list.find((a: any) => a.hostId === h.id && a.kind === 'memory' && !a.ack)) store.upsert(AL, { id: randomUUID(), kind: 'memory', hostId: h.id, hostName: h.name, value: `${m.memPct}%`, message: `内存 ${m.memPct}% 超 ${th.mem || 90}%`, time: new Date().toISOString(), ack: false }); }
+            if ((Number(m.diskMaxPct ?? m.diskUse) || 0) > (th.disk || 80)) pushAlert('disk', h, `${m.diskMaxPct ?? m.diskUse}%`, `磁盘 ${m.diskMaxPct ?? m.diskUse}% 超 ${th.disk || 80}%`);
+            if ((m.memPct || 0) > (th.mem || 90)) pushAlert('memory', h, `${m.memPct}%`, `内存 ${m.memPct}% 超 ${th.mem || 90}%`);
           } catch {}
         }
       })();

@@ -5,6 +5,7 @@ import { mkdirSync, writeFileSync, existsSync, readdirSync, chmodSync, appendFil
 import { join } from 'node:path';
 import { store, DATA_DIR } from '../lib/store.js';
 import { audit } from '../lib/audit.js';
+import { notify } from './notify.js';
 import type { Host } from '../lib/host.js';
 
 export const ANSIBLE_DIR = join(DATA_DIR, 'ansible');
@@ -131,7 +132,7 @@ export function runAnsible(opts: RunOpts): { runId: string; taskId: string } {
       const sched = (cfg().schedules || []).find((s: any) => s.id === opts.scheduleId);
       if (sched) { sched.lastRun = now; sched.lastStatus = status; sched.nextRunAt = new Date(Date.now() + (sched.intervalMin || 60) * 60000).toISOString(); saveCfg(cfg()); }
       // 失败通知(铃铛)
-      if (status === 'fail' && (opts.notify || sched?.notify)) store.upsert('alerts', { id: randomUUID(), kind: 'ansible', hostId: 'ansible', hostName: 'Ansible', value: '失败', message: `Ansible「${title}」执行失败`, time: now, ack: false });
+      if (status === 'fail' && (opts.notify || sched?.notify)) { store.upsert('alerts', { id: randomUUID(), kind: 'ansible', hostId: 'ansible', hostName: 'Ansible', value: '失败', message: `Ansible「${title}」执行失败`, time: now, ack: false }); notify('Ansible 任务失败', `「${title}」执行失败, 请查看执行记录`); }
       audit('ansible', title, `${status}${extra ? ' · ' + extra.slice(0, 120) : ''}`, 'web');
     };
     const kill = () => { try { process.kill(-child.pid!, 'SIGKILL'); } catch { try { child.kill('SIGKILL'); } catch { /* */ } } };

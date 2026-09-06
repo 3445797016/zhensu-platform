@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Tabs, Card, Table, Tag, Space, Input, Button, Switch, Alert, message, Typography, Divider } from 'antd';
-import { SafetyOutlined, KeyOutlined, AuditOutlined, ReloadOutlined, LogoutOutlined } from '@ant-design/icons';
+import { Tabs, Card, Table, Tag, Space, Input, Button, Switch, Alert, message, Typography, Divider, Select, Popconfirm, Popover } from 'antd';
+import { SafetyOutlined, KeyOutlined, AuditOutlined, ReloadOutlined, LogoutOutlined, BellOutlined, PlusOutlined, SendOutlined, DeleteOutlined, SaveOutlined } from '@ant-design/icons';
 import { api } from '../api';
 
 export default function SystemCenter() {
@@ -9,6 +9,7 @@ export default function SystemCenter() {
       { key: 'audit', label: '📋 操作审计', children: <AuditTab /> },
       { key: 'api', label: '🔑 开放 API', children: <ApiTab /> },
       { key: 'sec', label: '🛡 登录安全', children: <SecTab /> },
+      { key: 'notify', label: '🔔 通知', children: <NotifyTab /> },
     ]} />
   );
 }
@@ -83,6 +84,64 @@ function SecTab() {
         </Space>
         <Divider />
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>说明:会话 Cookie(HttpOnly,3 天)由后端管理;未来可扩展多用户/角色/二次验证。危险操作(网络安全 danger 工具、删除等)仍保留二次确认。</Typography.Text>
+      </Space>
+    </Card>
+  );
+}
+
+const TYPE_INFO: any = {
+  dingtalk: { label: '钉钉', hint: '群机器人 Webhook: https://oapi.dingtalk.com/robot/send?access_token=xxx（安全设置若加签/关键字需一致）' },
+  feishu: { label: '飞书', hint: '群机器人 Webhook: https://open.feishu.cn/open-apis/bot/v2/hook/xxx' },
+  serverchan: { label: 'Server酱', hint: '完整推送地址: https://sctapi.ftqq.com/<SENDKEY>.send' },
+  webhook: { label: 'Webhook', hint: '任意 HTTP 端点,收到 POST JSON {title, content, time, source}' },
+};
+
+function NotifyTab() {
+  const [chs, setChs] = useState<any[]>([]);
+  const [addType, setAddType] = useState('dingtalk');
+  const load = () => api.get('/notify/config').then((r) => setChs(r.channels || []));
+  useEffect(() => { load(); }, []);
+  const patch = (id: string, p: any) => setChs(chs.map((c) => (c.id === id ? { ...c, ...p } : c)));
+  const save = async () => {
+    try { await api.put('/notify/config', { channels: chs }); message.success('通知渠道已保存'); load(); }
+    catch (e: any) { message.error(String(e?.message || e)); }
+  };
+  const test = async (ch: any) => {
+    try { const r = await api.post('/notify/test', { channel: ch }); message.success(r.msg || '已发送'); }
+    catch (e: any) { message.error(String(e?.message || e)); }
+  };
+  const add = async () => { const r = await api.post('/notify/channel', { type: addType }); setChs([...chs, r.channel]); };
+  return (
+    <Card size="small" title={<Space><BellOutlined /><b>告警通知渠道</b><Tag color="orange">钉钉/飞书/Server酱/Webhook</Tag></Space>}
+      extra={<Space><Button icon={<ReloadOutlined />} onClick={load} /><Button onClick={async () => { const r = await api.post('/notify/resend'); message.info(r.msg); }}>重放最近告警</Button><Button type="primary" icon={<SaveOutlined />} onClick={save}>保存全部</Button></Space>}>
+      <Space direction="vertical" style={{ width: '100%' }} size={10}>
+        <Alert type="info" showIcon message="监控阈值告警、Ansible 定时任务失败等会自动通过启用的渠道推送(右上角铃铛之外的额外通知)。" />
+        <Space>
+          <span>添加渠道:</span>
+          <Select style={{ width: 180 }} value={addType} onChange={setAddType} options={Object.keys(TYPE_INFO).map((k) => ({ value: k, label: TYPE_INFO[k].label }))} />
+          <Button icon={<PlusOutlined />} onClick={add}>添加</Button>
+        </Space>
+        {chs.length === 0 && <Alert type="warning" showIcon message="还没有通知渠道。添加一个钉钉/飞书群机器人或 Server酱,点「保存」后即可收告警。" />}
+        {chs.map((c) => (
+          <Card key={c.id} size="small" style={{ background: '#fafafa' }}>
+            <Space direction="vertical" style={{ width: '100%' }} size={6}>
+              <Space wrap>
+                <Tag color="geekblue">{TYPE_INFO[c.type]?.label || c.type}</Tag>
+                <span>名称</span><Input style={{ width: 140 }} size="small" value={c.name} onChange={(e) => patch(c.id, { name: e.target.value })} />
+                <span>启用</span><Switch size="small" checked={!!c.enabled} onChange={(v) => patch(c.id, { enabled: v })} />
+                <Button size="small" icon={<SendOutlined />} onClick={() => test(c)}>发送测试</Button>
+                <Popconfirm title="删除该渠道?" onConfirm={() => setChs(chs.filter((x) => x.id !== c.id))}><Button size="small" danger icon={<DeleteOutlined />} /></Popconfirm>
+              </Space>
+              <Space wrap style={{ width: '100%' }}>
+                <span style={{ width: 60 }}>Webhook</span>
+                <Input size="small" style={{ width: 'calc(100% - 120px)' }} value={c.url} onChange={(e) => patch(c.id, { url: e.target.value })} placeholder="https://…" />
+                {c.type === 'dingtalk' && <span style={{ width: 60 }}>关键字</span>}
+                {c.type === 'dingtalk' && <Input size="small" style={{ width: 200 }} value={c.keyword} onChange={(e) => patch(c.id, { keyword: e.target.value })} placeholder="(如机器人安全设置需要)" />}
+              </Space>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>{TYPE_INFO[c.type]?.hint}</Typography.Text>
+            </Space>
+          </Card>
+        ))}
       </Space>
     </Card>
   );
