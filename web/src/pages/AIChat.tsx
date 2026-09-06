@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Card, Input, Button, Space, Tag, App, Modal, Select, Typography, Alert, Divider, Tooltip, Spin, Badge } from 'antd';
+import { Card, Input, Button, Space, Tag, App, Modal, Select, AutoComplete, Typography, Alert, Divider, Tooltip, Spin, Badge, Popconfirm } from 'antd';
 import { SendOutlined, SettingOutlined, RobotOutlined, UserOutlined, WarningOutlined, DeleteOutlined } from '@ant-design/icons';
 import { api } from '../api';
 import Markdown from '../components/Markdown';
@@ -22,13 +22,18 @@ export default function AIChat() {
   const [busy, setBusy] = useState(false);
   const [cfgOpen, setCfgOpen] = useState(false);
   const [fProv, setFProv] = useState('');
+  const [fName, setFName] = useState('');
+  const [fBase, setFBase] = useState('');
   const [fModel, setFModel] = useState('');
   const [fKey, setFKey] = useState('');
+  const [fClearKey, setFClearKey] = useState(false);
+  const [fAdd, setFAdd] = useState(false);
+  const provSel = cfg?.providers?.find((p: any) => p.id === fProv);
   const { message } = App.useApp();
   const listRef = useRef<HTMLDivElement>(null);
   const [hint, setHint] = useState('');
 
-  useEffect(() => { api.get('/ai/config').then((c) => { setCfg(c); setFProv(c.selected?.id || c.providers?.[0]?.id || ''); setFModel(c.selected?.model || ''); }); }, []);
+  useEffect(() => { api.get('/ai/config').then((c) => { setCfg(c); const s = c.selected || c.providers?.[0]; if (s) { setFProv(s.id); setFModel(s.model || s.defaultModel || ''); setFBase(s.baseURL || ''); setFName(s.name || ''); } }); }, []);
 
   const send = async (text: string) => {
     const t = text.trim(); if (!t || busy) return;
@@ -93,13 +98,53 @@ export default function AIChat() {
   };
 
   const saveCfg = async () => {
-    const prov = cfg?.providers?.find((p: any) => p.id === fProv);
-    // 留空/为 *** 则保留已存 key；填了则覆盖
-    const key = fKey ? fKey : (prov?.configured ? '***' : '');
-    await api.put('/ai/config', { providerId: fProv, model: fModel || prov?.defaultModel, baseURL: prov?.baseURL, apiKey: key });
-    message.success('已保存并切换到 ' + (prov?.name || fProv));
-    setCfgOpen(false);
-    const c = await api.get('/ai/config'); setCfg(c); setFKey('');
+    try {
+      const list = cfg?.providers || [];
+      const isAdd = fAdd;
+      // 新增自定义:从名称生成合法 id(如 custom-mylocal)
+      let provId = fProv;
+      let display = '';
+      if (isAdd) {
+        const slug = (fName || 'custom').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'custom';
+        provId = slug.startsWith('custom') ? slug : 'custom-' + slug;
+        display = fName.trim() || provId;
+        if (!fBase.trim()) { message.warning('请填写 API 地址(baseURL)'); return; }
+        if (!fModel.trim()) { message.warning('请填写模型 ID'); return; }
+      } else {
+        const prov = list.find((p: any) => p.id === provId);
+        display = prov?.name || provId;
+        if (!fBase.trim()) { message.warning('API 地址不能为空'); return; }
+      }
+      // key 语义:填了新 key→覆盖;勾选清除→清空;否则保留
+      const keyPayload = fKey ? fKey : (fClearKey ? '' : '***');
+      await api.put('/ai/config', {
+        providerId: provId, name: isAdd ? display : undefined,
+        model: fModel.trim(), baseURL: fBase.trim(), apiKey: keyPayload,
+        models: isAdd ? [fModel.trim()] : undefined,
+      });
+      message.success('已保存并切换到 ' + display);
+      setCfgOpen(false); setFKey(''); setFClearKey(false); setFAdd(false);
+      const c = await api.get('/ai/config'); setCfg(c);
+      const sel = c.selected || c.providers?.[0];
+      if (sel) { setFProv(sel.id); setFModel(sel.model || sel.defaultModel || ''); setFBase(sel.baseURL || ''); setFName(sel.name || ''); }
+    } catch (e: any) { message.error('保存失败: ' + (e?.message || e)); }
+  };
+
+  const delProvider = async (id: string) => {
+    try {
+      await api.del('/ai/config/' + encodeURIComponent(id));
+      message.success('已删除');
+      const c = await api.get('/ai/config'); setCfg(c);
+      const s = c.selected || c.providers?.[0];
+      if (s) { setFProv(s.id); setFModel(s.model || s.defaultModel || ''); setFBase(s.baseURL || ''); setFName(s.name || ''); }
+    } catch (e: any) { message.error(String(e?.message || e)); }
+  };
+
+  const pickProv = (v: string) => {
+    if (v === '__add') { setFAdd(true); setFProv('__add'); setFName(''); setFBase(''); setFModel(''); return; }
+    setFAdd(false); setFProv(v);
+    const p = cfg?.providers?.find((x: any) => x.id === v);
+    if (p) { setFModel(p.defaultModel || p.models?.[0] || ''); setFBase(p.baseURL || ''); setFName(p.name || ''); }
   };
 
   useEffect(() => { listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' }); }, [msgs]);
@@ -160,23 +205,45 @@ export default function AIChat() {
         </Space.Compact>
       </Card>
 
-      <Modal title="AI 提供商设置" open={cfgOpen} onCancel={() => setCfgOpen(false)} onOk={saveCfg} okText="保存" width={480}>
-        {cfg && (
-          <>
-            <Alert type="info" showIcon style={{ marginBottom: 12 }} message="已自动读取 pi 中配置的模型 Key。也可在此切换模型或手动填 Key。" />
-            <div style={{ display: 'grid', gap: 12 }}>
-              <div><Typography.Text>提供商</Typography.Text>
-                <Select style={{ width: '100%', marginTop: 4 }} value={fProv} onChange={(v) => { setFProv(v); const pr = cfg.providers.find((p: any) => p.id === v); setFModel(pr?.models?.[0] || pr?.defaultModel || ''); }} options={cfg.providers.map((p: any) => ({ value: p.id, label: `${p.name} ${p.configured ? '(已配置)' : '(未配置Key)'}` }))} />
-              </div>
-              <div><Typography.Text>模型（下拉可改；deepseek-reasoner 为深度思考、适合难题）</Typography.Text>
-                <Select style={{ width: '100%', marginTop: 4 }} value={fModel} onChange={setFModel} options={(cfg.providers.find((p: any) => p.id === fProv)?.models || [fModel]).map((m: string) => ({ value: m, label: m }))} placeholder="模型 ID" />
-              </div>
-              <div><Typography.Text>API Key（留空 = 保留原 key；填新 key = 覆盖）</Typography.Text>
-                <Input.Password style={{ marginTop: 4 }} value={fKey} onChange={(e) => setFKey(e.target.value)} placeholder="sk-..." />
-              </div>
-            </div>
-          </>
-        )}
+      <Modal title={fAdd ? '新增自定义提供商' : 'AI 提供商设置'} open={cfgOpen} onCancel={() => { setCfgOpen(false); setFAdd(false); setFKey(''); setFClearKey(false); }} onOk={saveCfg} okText={fAdd ? '添加并切换' : '保存'} width={560} footer={null}>
+        {cfg && (<div style={{ display: 'grid', gap: 12 }}>
+          <Alert type={fAdd ? 'warning' : 'info'} showIcon style={{ marginBottom: 4 }} message={fAdd
+            ? '自定义提供商:填名称 + OpenAI 兼容 API 地址 + 模型 + Key(可留空,按地址鉴权需填)。例如本地服务 http://127.0.0.1:3080/v1。'
+            : '预置已自动读取 pi 中的 Key。可编辑 API 地址指向自定义/本地端点,并手动填 Key。' + (provSel?.configured ? ' 当前已配置 Key。' : '')} />
+          <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', alignItems: 'center', gap: 6 }}>
+            <Typography.Text>{fAdd ? '名称' : '提供商'}</Typography.Text>
+            {fAdd
+              ? <Input value={fName} onChange={(e) => setFName(e.target.value)} placeholder="如: 我的本地模型" />
+              : <Select style={{ width: '100%' }} value={fProv} onChange={pickProv} options={[
+                  ...(cfg.providers || []).map((p: any) => ({ value: p.id, label: `${p.name}${p.custom ? ' (自定义)' : ''} ${p.configured ? '·已配Key' : ''}` })),
+                  { value: '__add', label: '➕ 新增自定义提供商' },
+                ]} />}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', alignItems: 'center', gap: 6 }}>
+            <Typography.Text>API 地址(baseURL)</Typography.Text>
+            <Input value={fBase} onChange={(e) => setFBase(e.target.value)} placeholder="https://api.openai.com/v1 或 http://127.0.0.1:3080/v1" />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', alignItems: 'center', gap: 6 }}>
+            <Typography.Text>模型 ID</Typography.Text>
+            <AutoComplete value={fModel} onChange={setFModel} style={{ width: '100%' }}
+              options={fAdd ? undefined : ((cfg.providers.find((p: any) => p.id === fProv)?.models || [fModel]).map((m: string) => ({ value: m })))}
+              placeholder="如 deepseek-chat / gpt-4o-mini" filterOption={(v: any, o: any) => o?.value ? String(o.value).toLowerCase().includes(String(v).toLowerCase()) : false} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '150px 1fr', alignItems: 'center', gap: 6 }}>
+            <Typography.Text>API Key{provSel?.configured && !fAdd ? <Typography.Text type="secondary" style={{ fontSize: 11 }}> (已配置)</Typography.Text> : null}</Typography.Text>
+            <Space.Compact style={{ width: '100%' }}>
+              <Input.Password value={fKey} onChange={(e) => setFKey(e.target.value)} placeholder={fClearKey ? '将清除已保存 Key' : (provSel?.configured ? '留空 = 保留已配置 Key' : 'sk-…(可留空,若该地址无需鉴权)' )} />
+              {provSel?.configured && !fAdd && <Button onClick={() => { setFClearKey(!fClearKey); setFKey(''); }} type={fClearKey ? 'primary' : 'default'} danger={fClearKey}>{fClearKey ? '取消清除' : '清除 Key'}</Button>}
+            </Space.Compact>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+            <Space>
+              <Button type="primary" onClick={saveCfg}>{fAdd ? '添加并切换' : '保存'}</Button>
+              <Button onClick={() => { setCfgOpen(false); setFAdd(false); }}>取消</Button>
+            </Space>
+            {!fAdd && provSel?.custom && <Popconfirm title="删除该自定义提供商?" onConfirm={() => delProvider(fProv)}><Button danger size="small">删除</Button></Popconfirm>}
+          </div>
+        </div>)}
       </Modal>
     </div>
   );

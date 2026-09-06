@@ -4,6 +4,7 @@ import { store } from '../lib/store.js';
 import { Host, run, describeHost } from '../lib/host.js';
 import { defaultProviders, chat, Provider } from '../lib/llm.js';
 import { TOOLS } from '../modules/tools.js';
+import { audit } from '../lib/audit.js';
 
 const sysPrompt = `你是一个能力全面、善于深度思考的 AI 助手（运维 + 通用）。
 
@@ -96,34 +97,77 @@ export async function register(fastify: FastifyInstance) {
 
   fastify.get('/ai/config', () => {
     const cfg = store.read<any>('ai', {});
-    const providers = mergedProviders().map(({ def, apiKey }) => ({
+    const defaults = mergedProviders();
+    const defIds = new Set(defaults.map((x) => x.def.id));
+    const providers: any[] = defaults.map(({ def, apiKey }) => ({
       id: def.id, name: def.name, baseURL: def.baseURL, defaultModel: def.defaultModel,
       models: def.models || [def.defaultModel], configured: !!apiKey,
     }));
+    // 自定义提供商(不在预置列表,由用户在设置中新增)
+    for (const [id, ovRaw] of Object.entries(cfg.providers || {})) {
+      const ov: any = ovRaw;
+      if (defIds.has(id) || !ov || typeof ov !== 'object') continue;
+      if (!ov.baseURL) continue;
+      const model = ov.model || 'default';
+      providers.push({
+        id, name: ov.name || id,
+        baseURL: ov.baseURL, defaultModel: model,
+        models: Array.isArray(ov.models) && ov.models.length ? ov.models : [model],
+        configured: !!ov.apiKey, custom: true,
+      });
+    }
     const selId = cfg.selected?.id;
-    const selDef = mergedProviders().find((x) => x.def.id === selId);
+    const selDef = providers.find((x) => x.id === selId);
     return {
       providers,
       selected: selDef
-        ? { id: selDef.def.id, model: cfg.selected?.model || selDef.def.defaultModel, baseURL: selDef.def.baseURL, configured: !!selDef.apiKey, models: selDef.def.models || [] }
+        ? { id: selDef.id, model: cfg.selected?.model || selDef.defaultModel, baseURL: selDef.baseURL, configured: selDef.configured, models: selDef.models || [] }
         : (providers[0] ? { id: providers[0].id, model: providers[0].defaultModel, baseURL: providers[0].baseURL, configured: providers[0].configured, models: providers[0].models || [] } : null),
       hosts: store.list<Host>('hosts').map((h) => ({ id: h.id, name: h.name, kind: h.kind })),
     };
   });
 
   fastify.put('/ai/config', (req, reply) => {
-    const { providerId, model, baseURL, apiKey } = req.body as any;
-    const all = mergedProviders();
-    const found = all.find((x) => x.def.id === providerId);
-    if (!found) return reply.code(400).send({ error: '未知提供商' });
+    const { providerId, name, model, baseURL, apiKey, models } = req.body as any;
+    const id = String(providerId || '').trim();
+    if (!id || /[^\w.:/-]/.test(id)) return reply.code(400).send({ error: '非法提供商 id' });
+    const defaults = mergedProviders();
+    const defIds = new Set(defaults.map((x) => x.def.id));
+    const isCustom = !defIds.has(id);
     const cfg = store.read<any>('ai', {});
     cfg.providers = cfg.providers || {};
-    const ov = { ...(cfg.providers[providerId] || {}), model: model || undefined, baseURL: baseURL || undefined };
-    if (apiKey && apiKey !== '***') ov.apiKey = apiKey;   // '***' 表示保留原 key
-    else if (!apiKey) delete ov.apiKey;                    // 空则不写 key
-    cfg.providers[providerId] = ov;
-    cfg.selected = { id: providerId, model: model || undefined };
+    const old = cfg.providers[id] || {};
+    const ov: any = { ...old };
+    if (model !== undefined) ov.model = model || undefined;
+    if (baseURL !== undefined) ov.baseURL = String(baseURL || '').trim() || undefined;
+    if (name !== undefined) ov.name = String(name || '').trim() || undefined;
+    if (Array.isArray(models) && models.length) ov.models = models.map(String);
+    if (apiKey && apiKey !== '***') ov.apiKey = apiKey;
+    else if (apiKey === '') delete ov.apiKey;                 // 显式空串=清除 key
+    if (isCustom && !ov.baseURL) return reply.code(400).send({ error: '自定义提供商必须填写 API 地址(baseURL)' });
+    if (!ov.model && ov.models?.length) ov.model = ov.models[0];
+    cfg.providers[id] = ov;
+    cfg.selected = { id, model: ov.model || undefined };
     store.write('ai', cfg);
+    audit('ai', 'config', isCustom ? `保存自定义提供商 ${name || id}` : `更新 ${id}`, 'web');
+    return { ok: true };
+  });
+
+  fastify.delete('/ai/config/:id', (req, reply) => {
+    const id = String((req.params as any).id || '');
+    const cfg = store.read<any>('ai', {});
+    const defaults = mergedProviders();
+    if (defaults.some((x) => x.def.id === id)) {
+      // 预置提供商:仅清除其覆盖配置
+      if (cfg.providers) delete cfg.providers[id];
+      if (cfg.selected?.id === id) cfg.selected = undefined;
+      store.write('ai', cfg);
+      return { ok: true, note: '预置提供商已重置为默认' };
+    }
+    if (cfg.providers) delete cfg.providers[id];
+    if (cfg.selected?.id === id) cfg.selected = undefined;
+    store.write('ai', cfg);
+    audit('ai', 'config', `删除提供商 ${id}`, 'web');
     return { ok: true };
   });
 
