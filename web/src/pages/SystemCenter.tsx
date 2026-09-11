@@ -195,7 +195,7 @@ function NotifyTab() {
                     <span>端口</span><Input size="small" style={{ width: 80 }} value={c.port} onChange={(e) => patch(c.id, { port: Number(e.target.value) || 587 })} />
                     <Select size="small" style={{ width: 130 }} value={c.secure || 'starttls'} onChange={(v) => patch(c.id, { secure: v })} options={[{ value: 'starttls', label: 'STARTTLS(587)' }, { value: 'ssl', label: 'SSL(465)' }, { value: 'none', label: '明文(25)' }]} /></Space>
                   <Space wrap><span style={{ width: 60 }}>账号</span><Input size="small" style={{ width: 240 }} value={c.user} onChange={(e) => patch(c.id, { user: e.target.value })} placeholder="发信账号(可空)" />
-                    <span style={{ width: 60 }}>密码</span><Input.Password size="small" style={{ width: 240 }} value={c.password} onChange={(e) => patch(c.id, { password: e.target.value })} placeholder="授权码/密码(留空=保留)" /></Space>
+                    <span style={{ width: 60 }}>密码</span><Input.Password size="small" style={{ width: 240 }} value={c.password} onChange={(e) => patch(c.id, { password: e.target.value })} placeholder="授权码/密码(留空=无密码)" /></Space>
                   <Space wrap><span style={{ width: 60 }}>发件人</span><Input size="small" style={{ width: 240 }} value={c.from} onChange={(e) => patch(c.id, { from: e.target.value })} placeholder="you@example.com" />
                     <span style={{ width: 60 }}>收件人</span><Input size="small" style={{ width: 300 }} value={c.to} onChange={(e) => patch(c.id, { to: e.target.value })} placeholder="多个用逗号分隔" /></Space>
                 </Space>

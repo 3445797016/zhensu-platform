@@ -3,16 +3,20 @@ import type { FastifyInstance } from 'fastify';
 import { audit } from '../lib/audit.js';
 import { cfgChannels, saveChannels, testChannel, newChannel, NS, notify } from '../modules/notify.js';
 import { store } from '../lib/store.js';
+import { enc, dec } from '../lib/secure.js';
+
+// 返回给前端时解密 password(与 hosts/dbconns 一致),避免把 at-rest 密文透出
+export const plainChannels = () => cfgChannels().map((c) => ({ ...c, password: c.password ? dec(c.password) : c.password }));
 
 export async function register(fastify: FastifyInstance) {
-  fastify.get('/notify/config', () => ({ channels: cfgChannels() }));
+  fastify.get('/notify/config', () => ({ channels: plainChannels() }));
 
   fastify.put('/notify/config', (req, reply) => {
     const { channels } = req.body as any;
     if (!Array.isArray(channels)) return reply.code(400).send({ error: 'channels 需为数组' });
-    saveChannels(channels.map((c: any) => ({ id: String(c.id || ''), type: String(c.type || 'webhook'), name: String(c.name || c.type), url: c.url ? String(c.url) : undefined, keyword: c.keyword ? String(c.keyword) : undefined, enabled: !!c.enabled, host: c.host ? String(c.host) : undefined, port: c.port ? Number(c.port) : undefined, secure: c.secure || undefined, user: c.user ? String(c.user) : undefined, password: c.password ? String(c.password) : undefined, from: c.from ? String(c.from) : undefined, to: c.to ? String(c.to) : undefined })));
+    saveChannels(channels.map((c: any) => ({ id: String(c.id || ''), type: String(c.type || 'webhook'), name: String(c.name || c.type), url: c.url ? String(c.url) : undefined, keyword: c.keyword ? String(c.keyword) : undefined, enabled: !!c.enabled, host: c.host ? String(c.host) : undefined, port: c.port ? Number(c.port) : undefined, secure: c.secure || undefined, user: c.user ? String(c.user) : undefined, password: c.password ? enc(String(c.password)) as string : undefined, from: c.from ? String(c.from) : undefined, to: c.to ? String(c.to) : undefined })));
     audit('notify', 'config', `保存 ${channels.length} 个通知渠道`, 'web');
-    return { ok: true, channels: cfgChannels() };
+    return { ok: true, channels: plainChannels() };
   });
 
   fastify.post('/notify/channel', (req, reply) => {
