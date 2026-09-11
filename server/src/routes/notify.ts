@@ -10,7 +10,7 @@ export async function register(fastify: FastifyInstance) {
   fastify.put('/notify/config', (req, reply) => {
     const { channels } = req.body as any;
     if (!Array.isArray(channels)) return reply.code(400).send({ error: 'channels 需为数组' });
-    saveChannels(channels.map((c: any) => ({ id: String(c.id || ''), type: String(c.type || 'webhook'), name: String(c.name || c.type), url: String(c.url || ''), keyword: c.keyword ? String(c.keyword) : undefined, enabled: !!c.enabled })));
+    saveChannels(channels.map((c: any) => ({ id: String(c.id || ''), type: String(c.type || 'webhook'), name: String(c.name || c.type), url: c.url ? String(c.url) : undefined, keyword: c.keyword ? String(c.keyword) : undefined, enabled: !!c.enabled, host: c.host ? String(c.host) : undefined, port: c.port ? Number(c.port) : undefined, secure: c.secure || undefined, user: c.user ? String(c.user) : undefined, password: c.password ? String(c.password) : undefined, from: c.from ? String(c.from) : undefined, to: c.to ? String(c.to) : undefined })));
     audit('notify', 'config', `保存 ${channels.length} 个通知渠道`, 'web');
     return { ok: true, channels: cfgChannels() };
   });
@@ -25,7 +25,7 @@ export async function register(fastify: FastifyInstance) {
 
   fastify.post('/notify/test', async (req, reply) => {
     const { channel } = req.body as any;
-    if (!channel?.url) return reply.code(400).send({ error: '缺少 url' });
+    if (!channel || (!channel.url && channel.type !== 'email')) return reply.code(400).send({ error: '缺少 url' });
     try {
       await testChannel(channel);
       return { ok: true, msg: '测试消息已发送,请查看手机/群' };

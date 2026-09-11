@@ -78,6 +78,12 @@ export function encryptAll() {
     const k = store.read<any>('apikey', {});
     if (k?.key) { const n = enc(k.key); if (n !== k.key) { k.key = n; store.write('apikey', k); } }
   } catch { /* ignore */ }
+  // 通知渠道 email 密码
+  try {
+    const n = store.read<any>('notify', {}); let ch = false;
+    for (const c of n.channels || []) if (c?.password) { const x = enc(c.password); if (x !== c.password) { c.password = x; ch = true; } }
+    if (ch) store.write('notify', n);
+  } catch { /* ignore */ }
 }
 
 // 解密回退(管理端手动调用):把密文恢复为明文
@@ -90,4 +96,5 @@ export function decryptAll() {
   }
   try { const ai = store.read<any>('ai', {}); let ch = false; for (const ov of Object.values(ai.providers || {})) { const o = ov as any; if (o?.apiKey && String(o.apiKey).startsWith(PREFIX)) { o.apiKey = dec(o.apiKey); ch = true; } } if (ch) store.write('ai', ai); } catch { /* ignore */ }
   try { const k = store.read<any>('apikey', {}); if (k?.key && String(k.key).startsWith(PREFIX)) { k.key = dec(k.key); store.write('apikey', k); } } catch { /* ignore */ }
+  try { const n = store.read<any>('notify', {}); let ch = false; for (const c of n.channels || []) if (c?.password && String(c.password).startsWith(PREFIX)) { c.password = dec(c.password); ch = true; } if (ch) store.write('notify', n); } catch { /* ignore */ }
 }

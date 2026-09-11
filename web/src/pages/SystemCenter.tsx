@@ -150,6 +150,7 @@ const TYPE_INFO: any = {
   feishu: { label: '飞书', hint: '群机器人 Webhook: https://open.feishu.cn/open-apis/bot/v2/hook/xxx' },
   serverchan: { label: 'Server酱', hint: '完整推送地址: https://sctapi.ftqq.com/<SENDKEY>.send' },
   webhook: { label: 'Webhook', hint: '任意 HTTP 端点,收到 POST JSON {title, content, time, source}' },
+  email: { label: '邮件(SMTP)', hint: 'SMTP 发信。QQ/163 等请用「授权码」作密码。465=SSL / 587=STARTTLS / 25=明文。' },
 };
 
 function NotifyTab() {
@@ -188,12 +189,23 @@ function NotifyTab() {
                 <Button size="small" icon={<SendOutlined />} onClick={() => test(c)}>发送测试</Button>
                 <Popconfirm title="删除该渠道?" onConfirm={() => setChs(chs.filter((x) => x.id !== c.id))}><Button size="small" danger icon={<DeleteOutlined />} /></Popconfirm>
               </Space>
+              {c.type === 'email' ? (
+                <Space direction="vertical" style={{ width: '100%' }} size={6}>
+                  <Space wrap><span style={{ width: 60 }}>服务器</span><Input size="small" style={{ width: 220 }} value={c.host} onChange={(e) => patch(c.id, { host: e.target.value })} placeholder="smtp.qq.com" />
+                    <span>端口</span><Input size="small" style={{ width: 80 }} value={c.port} onChange={(e) => patch(c.id, { port: Number(e.target.value) || 587 })} />
+                    <Select size="small" style={{ width: 130 }} value={c.secure || 'starttls'} onChange={(v) => patch(c.id, { secure: v })} options={[{ value: 'starttls', label: 'STARTTLS(587)' }, { value: 'ssl', label: 'SSL(465)' }, { value: 'none', label: '明文(25)' }]} /></Space>
+                  <Space wrap><span style={{ width: 60 }}>账号</span><Input size="small" style={{ width: 240 }} value={c.user} onChange={(e) => patch(c.id, { user: e.target.value })} placeholder="发信账号(可空)" />
+                    <span style={{ width: 60 }}>密码</span><Input.Password size="small" style={{ width: 240 }} value={c.password} onChange={(e) => patch(c.id, { password: e.target.value })} placeholder="授权码/密码(留空=保留)" /></Space>
+                  <Space wrap><span style={{ width: 60 }}>发件人</span><Input size="small" style={{ width: 240 }} value={c.from} onChange={(e) => patch(c.id, { from: e.target.value })} placeholder="you@example.com" />
+                    <span style={{ width: 60 }}>收件人</span><Input size="small" style={{ width: 300 }} value={c.to} onChange={(e) => patch(c.id, { to: e.target.value })} placeholder="多个用逗号分隔" /></Space>
+                </Space>
+              ) : (
               <Space wrap style={{ width: '100%' }}>
                 <span style={{ width: 60 }}>Webhook</span>
                 <Input size="small" style={{ width: 'calc(100% - 120px)' }} value={c.url} onChange={(e) => patch(c.id, { url: e.target.value })} placeholder="https://…" />
                 {c.type === 'dingtalk' && <span style={{ width: 60 }}>关键字</span>}
                 {c.type === 'dingtalk' && <Input size="small" style={{ width: 200 }} value={c.keyword} onChange={(e) => patch(c.id, { keyword: e.target.value })} placeholder="(如机器人安全设置需要)" />}
-              </Space>
+              </Space>)}
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>{TYPE_INFO[c.type]?.hint}</Typography.Text>
             </Space>
           </Card>
