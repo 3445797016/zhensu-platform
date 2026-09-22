@@ -51,7 +51,12 @@
   - `web tsc --noEmit` 通过；`vite build` 通过
   - Chromium 无头逐路由冒烟：29 个路由全部渲染成功，横幅按预期出现/隐藏，**0 个 JS 异常**
 - **文件**：见 Git `c5c4198`
-- **待下一批**：Agents / AIChat / Ansible / BackupCenter / BuildTools / Code / DatabaseCenter / DevOps / DevOpsCI / JenkinsBuild / KnowledgeBase / Monitoring / Notebook / NotifyChannels / ProblemsPage / ReportPage / Solve / SystemCenter / Tunnels 等页面的内容级改造（全局横幅与表格质感已覆盖它们）
+- **后续批次（本次会话继续完成）**：
+  - 批次2/3（`446f40e`）：BackupCenter / BuildTools / Agents / NotifyChannels / ReportPage / ProblemsPage / DevOps / Tunnels / SystemCenter / DatabaseCenter / JenkinsBuild — 均新增渐变 StatCard KPI 概览
+  - 批次4（`66a2c87`）：Ansible（Playbook/执行/定时/环境）、知识库（文档/块/词条/AI检索）
+  - 累计 **26 个页面**完成内容级升级；每批均 `tsc` + `vite build` + Chromium 无头冒烟（0 JS 异常）后提交
+- **保持原样（已属工作区/自定义视觉，仅受全局主题影响）**：Code（编辑器）、Solve（力扣式）、AIChat（对话）、Notebook（交互脚本）、Monitoring（已有图表仪表）、DevOpsCI（卡片密集）
+- **下一步**：可继续把上面这些工作区页的顶部工具条/空态统一；或补充全局深色模式
 
 ### 2026-09-22 — 网络工具箱 v2（功能 + 界面全面重构）
 
