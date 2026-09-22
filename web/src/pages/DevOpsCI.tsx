@@ -124,7 +124,7 @@ function RepoDrawer({ repo, onClose }: { repo: any; onClose: () => void }) {
       </Space>
       <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 12 }}>
         <Card size="small" title="文件" bodyStyle={{ maxHeight: 520, overflow: 'auto', padding: 8 }}>
-          {files.length ? files.map((f) => <div key={f} onClick={() => openFile(f)} style={{ cursor: 'pointer', padding: '4px 8px', borderRadius: 4, background: selFile === f ? '#e6f4ff' : undefined }}><FileAddOutlined style={{ marginRight: 6, color: '#999' }} />{f}</div>) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />}
+          {files.length ? files.map((f) => <div key={f} onClick={() => openFile(f)} style={{ cursor: 'pointer', padding: '4px 8px', borderRadius: 4, background: selFile === f ? 'rgba(47,107,255,.18)' : undefined }}><FileAddOutlined style={{ marginRight: 6, color: '#999' }} />{f}</div>) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />}
         </Card>
         <Card size="small" title="提交历史" bodyStyle={{ maxHeight: 520, overflow: 'auto', padding: 8 }}>
           <Timeline items={(info.commits || []).map((c: any) => ({ children: <span><b>{c.hash}</b> {c.message}</span> }))} />
@@ -315,7 +315,7 @@ function NexusArtifacts() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 12 }}>
         <Card size="small" title="仓库列表" bodyStyle={{ maxHeight: 480, overflow: 'auto' }}>
-          {repos.length ? repos.map((r) => <div key={r.name} onClick={() => loadComponents(r.name)} style={{ cursor: 'pointer', padding: '6px 8px', borderRadius: 4, background: selRepo === r.name ? '#e6f4ff' : undefined }}>
+          {repos.length ? repos.map((r) => <div key={r.name} onClick={() => loadComponents(r.name)} style={{ cursor: 'pointer', padding: '6px 8px', borderRadius: 4, background: selRepo === r.name ? 'rgba(47,107,255,.18)' : undefined }}>
             <DatabaseOutlined style={{ marginRight: 6, color: '#999' }} />{r.name}<Tag style={{ marginLeft: 6 }}>{r.format}</Tag>
           </div>) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="无数据,请检查连接配置" />}
         </Card>
