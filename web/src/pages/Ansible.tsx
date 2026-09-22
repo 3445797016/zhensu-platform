@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Card, Tabs, Table, Button, Space, Tag, Modal, Form, Input, Select, InputNumber, Switch, Alert, Typography, Drawer, Popconfirm, App, Badge } from 'antd';
-import { PlayCircleOutlined, PlusOutlined, DeleteOutlined, ReloadOutlined, EyeOutlined, ThunderboltOutlined, ScheduleOutlined, BookOutlined, DashboardOutlined, StopOutlined } from '@ant-design/icons';
+import { Card, Tabs, Table, Button, Space, Tag, Modal, Form, Input, Select, InputNumber, Switch, Alert, Typography, Drawer, Popconfirm, App, Badge, Row, Col } from 'antd';
+import { PlayCircleOutlined, PlusOutlined, DeleteOutlined, ReloadOutlined, EyeOutlined, ThunderboltOutlined, ScheduleOutlined, BookOutlined, DashboardOutlined, StopOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 
 const { Text } = Typography;
 
@@ -113,6 +114,12 @@ export default function AnsiblePage() {
 
   return (
     <Card size="small" styles={{ body: { padding: 8 } }}>
+      <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
+        <Col xs={12} md={6}><StatCard title="Playbook" value={pbs.files?.length || 0} icon={<BookOutlined />} color="#2f6bff" /></Col>
+        <Col xs={12} md={6}><StatCard title="执行记录" value={runs.length} icon={<ThunderboltOutlined />} color="#7c3aed" hint={`成功 ${runs.filter((r) => r.status === 'ok').length} · 失败 ${runs.filter((r) => r.status === 'fail').length}`} /></Col>
+        <Col xs={12} md={6}><StatCard title="定时任务" value={scheds.length} icon={<ScheduleOutlined />} color="#0891b2" hint={`启用 ${scheds.filter((s) => s.enabled).length}`} /></Col>
+        <Col xs={12} md={6}><StatCard title="运行环境" value={status?.installed ? '已就绪' : '未安装'} icon={<DashboardOutlined />} color={status?.installed ? '#16a34a' : '#f59e0b'} hint={status?.ansiblePlaybook?.version} /></Col>
+      </Row>
       <Tabs activeKey={tab} onChange={setTab} items={[
         { key: 'overview', label: <Space><DashboardOutlined />总览 / Inventory</Space>, children: (<>
           {statusCard}
