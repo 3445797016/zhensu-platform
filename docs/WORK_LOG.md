@@ -9,7 +9,7 @@
 
 <!-- 从这里开始，记录当前正在做什么 -->
 
-**网络工具箱 v2 重构** — 后端从 8 个拼 shell 字符串的接口升级为 14 个 argv 安全接口；前端由单文件表单重做为 Hero + 工具导航 + 可视化结果页
+**全站 UI 升级** — 建立全局设计系统(主题/token + global.css + 共享组件)，让 29 个路由统一获得品牌化横幅与精致表格/卡片质感；并分批把各页裸 `Statistic` 升级为渐变 KPI 卡
 
 ---
 
@@ -35,6 +35,23 @@
 ---
 
 ## 会话历史
+
+### 2026-09-22 — 全站 UI 升级（全局设计系统 + 分批页面改造）
+
+- **背景**：用户反馈「每个界面都很简陋」
+- **全局层（一次性提升全部 29 个路由）**：
+  - `web/src/main.tsx`：antd 主题 token 全面升级（圆角 10、控件高度 34、字号、组件级 token：Layout/Card/Table/Button/Input/Select/Menu/Tabs）
+  - `web/src/styles/global.css`（新）：卡片悬浮阴影、表头/行悬浮、表单聚焦环、滚动条、进入动画；`.ui-banner` 分区横幅、`.ui-stat` 渐变统计卡样式
+  - `web/src/components/ui.tsx`（新）：共享组件 `StatCard` / `Toolbar` / `SectionTitle` / `EmptyHint`
+  - `web/src/App.tsx`：侧边栏由 29 条平铺改为 **7 大分区分组**（总览/基础设施/应用与数据/安全/自动化与交付/开发与 AI/系统）；除自带 Hero 或需全屏工作区的路由（`/`、`/net`、`/pentagi`、`/code`、`/notebook`、`/ai`）外，**自动注入分区渐变色页面横幅**（图标+标题+描述+分区胶囊）；路由切换加入进入动画
+- **页面深度升级（13 个）**：Firewall / Hosts / K8sBoard / WebLogs / Tools / LinuxManage / MinIO / SecurityPage / VPN / Docker / Websites / FilesPage / TaskCenter
+  - 顶部裸 `Statistic` 卡 → 渐变 `StatCard`（图标、左侧色条、进度条、悬浮抬升）
+  - 新增 KPI 概览：Docker（容器/运行中/镜像/版本）、Websites（站点/启用/HTTPS/反代）、Files（目录项/子目录/文件/总大小）、Hosts（纳管/本机/SSH/探活）、Firewall（策略/规则/流量等 6 项）
+- **验证**：
+  - `web tsc --noEmit` 通过；`vite build` 通过
+  - Chromium 无头逐路由冒烟：29 个路由全部渲染成功，横幅按预期出现/隐藏，**0 个 JS 异常**
+- **文件**：见 Git `c5c4198`
+- **待下一批**：Agents / AIChat / Ansible / BackupCenter / BuildTools / Code / DatabaseCenter / DevOps / DevOpsCI / JenkinsBuild / KnowledgeBase / Monitoring / Notebook / NotifyChannels / ProblemsPage / ReportPage / Solve / SystemCenter / Tunnels 等页面的内容级改造（全局横幅与表格质感已覆盖它们）
 
 ### 2026-09-22 — 网络工具箱 v2（功能 + 界面全面重构）
 
