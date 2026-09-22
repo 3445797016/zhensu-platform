@@ -179,7 +179,7 @@ export default function AIChat() {
               <RobotOutlined style={{ marginTop: 6, color: '#b37feb' }} />
               <div style={{ width: '100%' }}>
                 {m.error && <Alert type="error" showIcon message={m.error} />}
-                <div style={{ background: '#ffffff', border: '1px solid #e5e6eb', padding: '10px 14px', borderRadius: 12, width: '100%' }}>{m.text ? <Markdown text={m.text} /> : (m.tools?.length ? '' : <Spin size="small" />)}</div>
+                <div style={{ background: 'var(--zs-surface)', border: '1px solid var(--zs-border)', padding: '10px 14px', borderRadius: 12, width: '100%' }}>{m.text ? <Markdown text={m.text} /> : (m.tools?.length ? '' : <Spin size="small" />)}</div>
                 {m.tools?.map((t: any, j: number) => (
                   <Card key={j} size="small" style={{ marginTop: 8 }} styles={{ body: { padding: 8 } }}>
                     <Space size={4} wrap>

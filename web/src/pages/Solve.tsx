@@ -179,7 +179,7 @@ export default function SolvePage() {
           </div>
 
           {/* 控制台:标准输入 / 运行结果 / AI 助手 */}
-          <div style={{ height: 190, marginTop: 8, border: '1px solid #e5e6eb', borderRadius: 8, display: 'flex', flexDirection: 'column', background: '#fafafa' }}>
+          <div style={{ height: 190, marginTop: 8, border: '1px solid var(--zs-border)', borderRadius: 8, display: 'flex', flexDirection: 'column', background: 'var(--zs-surface-2)' }}>
             <div style={{ padding: '6px 10px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
               <Segmented size="small" value={consoleTab} onChange={(v: any) => setConsoleTab(v)}
                 options={[

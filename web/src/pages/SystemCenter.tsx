@@ -206,7 +206,7 @@ function NotifyTab() {
         </Space>
         {chs.length === 0 && <Alert type="warning" showIcon message="还没有通知渠道。从下拉菜单选择类型(钉钉/飞书/Server酱/Webhook/邮件),点「添加」后填写配置即可。" />}
         {chs.map((c) => (
-          <Card key={c.id} size="small" style={{ background: '#fafafa' }}>
+          <Card key={c.id} size="small" style={{ background: 'var(--zs-surface-2)' }}>
             <Space direction="vertical" style={{ width: '100%' }} size={6}>
               <Space wrap>
                 <Tag color="geekblue">{TYPE_INFO[c.type]?.label || c.type}</Tag>

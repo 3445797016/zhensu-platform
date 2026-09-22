@@ -64,7 +64,7 @@ export default function CodeAssistant({ code, language }: { code: string; langua
       <Space size={6} wrap style={{ marginBottom: 8 }}>
         {QUICK.map((q) => <Button key={q} size="small" disabled={busy} onClick={() => send(q)}>{q}</Button>)}
       </Space>
-      <div ref={listRef} style={{ flex: 1, overflow: 'auto', border: '1px solid #e5e6eb', borderRadius: 8, padding: 8, background: '#fff' }}>
+      <div ref={listRef} style={{ flex: 1, overflow: 'auto', border: '1px solid var(--zs-border)', borderRadius: 8, padding: 8, background: 'var(--zs-surface)' }}>
         {msgs.length === 0 && <Typography.Paragraph type="secondary" style={{ fontSize: 12, margin: 0 }}>询问任意编程问题，或点上方快捷按钮。回答会基于你编辑器里的代码。</Typography.Paragraph>}
         {msgs.map((m, i) => m.role === 'user' ? (
           <div key={i} style={{ textAlign: 'right', marginBottom: 8 }}>

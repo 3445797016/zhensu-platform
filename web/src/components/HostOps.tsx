@@ -104,7 +104,7 @@ function Threads({ hostId, pid }: any) {
   useEffect(() => { (async () => { try { const r = await api.get(`/hosts/${hostId}/processes/${pid}/threads`); r.ok ? setThreads(r.items || []) : setErr(r.error || ''); } catch (e: any) { setErr(e.message); } })(); }, [hostId, pid]);
   if (err) return <Tag color="red">{err}</Tag>;
   return (
-    <Table size="small" dataSource={threads} pagination={false} style={{ background: '#fafafa' }}
+    <Table size="small" dataSource={threads} pagination={false} style={{ background: 'var(--zs-surface-2)' }}
       columns={[
         { title: '线程ID', dataIndex: 'tid', width: 90 },
         { title: '所属进程', dataIndex: 'pid', width: 90 },

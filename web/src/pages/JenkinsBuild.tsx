@@ -129,7 +129,7 @@ export default function JenkinsBuild() {
 
       <Modal title={<Space><ApiOutlined />Webhook 自动触发 · {hook?.name || ''}</Space>} open={!!hook} onCancel={() => setHook(null)} footer={null} width={620}>
         <Alert type="info" showIcon style={{ marginBottom: 12 }} message="外部系统(Git/GitLab/GitHub CI 等)可通过 POST 该地址自动触发构建,无需登录。" />
-        <Paragraph copyable={{ text: `${location.origin}/api/open/jenkins/webhook/${hook?.id}?token=${hook?.webhookToken}` }} style={{ background: '#f6f8fa', padding: 10, borderRadius: 6 }}>
+        <Paragraph copyable={{ text: `${location.origin}/api/open/jenkins/webhook/${hook?.id}?token=${hook?.webhookToken}` }} style={{ background: 'var(--zs-surface-2)', padding: 10, borderRadius: 6 }}>
           <code style={{ wordBreak: 'break-all' }}>{location.origin}/api/open/jenkins/webhook/{hook?.id}?token={hook?.webhookToken}</code>
         </Paragraph>
         <Space>
@@ -337,7 +337,7 @@ function PipelineGraph({ build, onSelectStage, selStage }: { build: any; onSelec
             <Fragment key={i}>
               {i > 0 && <div style={{ flex: '0 0 30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c0c4cc', fontSize: 16 }}>▸</div>}
               <div onClick={() => onSelectStage(i)} style={{
-                flex: '0 0 158px', minHeight: 104, borderRadius: 10, cursor: 'pointer', background: '#fff',
+                flex: '0 0 158px', minHeight: 104, borderRadius: 10, cursor: 'pointer', background: 'var(--zs-surface)',
                 border: selected ? `2px solid ${color}` : '1px solid #eef0f3', borderTop: `5px solid ${color}`,
                 boxShadow: selected ? `0 4px 14px ${color}33` : '0 1px 5px rgba(0,0,0,0.06)',
                 padding: '10px 12px 8px', display: 'flex', flexDirection: 'column', transition: 'all .2s',

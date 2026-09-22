@@ -113,7 +113,7 @@ export default function ReportPage() {
           <Button size="small" icon={<SendOutlined />} onClick={async () => { await api.post('/report/generate', { push: true }); message.success('已推送'); load(); }}>推送到通知</Button>
           <Button size="small" type="primary" icon={<DownloadOutlined />} onClick={dl}>下载 .md</Button>
         </Space>}>
-        {current && <div style={{ background: '#fff', padding: '8px 16px', borderRadius: 8, border: '1px solid #eee' }}><Markdown text={current.markdown} /></div>}
+        {current && <div style={{ background: 'var(--zs-surface)', padding: '8px 16px', borderRadius: 8, border: '1px solid var(--zs-border)' }}><Markdown text={current.markdown} /></div>}
       </Drawer>
     </div>
   );

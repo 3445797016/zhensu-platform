@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Card, Tabs, Table, Tag, Space, Button, Select, App, Switch, InputNumber, Form,
-  Timeline, Alert, Badge, Row, Col, Divider, Tooltip, Typography,
+  Timeline, Alert, Badge, Row, Col, Divider, Tooltip, Typography, Segmented, Empty,
 } from 'antd';
 import {
   ApiOutlined, CloudServerOutlined, DashboardOutlined, DesktopOutlined, FieldTimeOutlined,
-  HddOutlined, LineChartOutlined, ThunderboltOutlined, WarningOutlined,
+  HddOutlined, LineChartOutlined, ThunderboltOutlined, WarningOutlined, CheckOutlined, ReloadOutlined, BellOutlined,
 } from '@ant-design/icons';
 import { api } from '../api';
 import { Processes } from '../components/HostOps';
@@ -282,22 +282,68 @@ function ProcessMonitor() {
 
 /* ============ 告警中心(保持不变) ============ */
 function Alerts() {
+  const { message } = App.useApp();
   const [list, setList] = useState<any[]>([]);
-  const load = () => api.get('/monitor/alerts').then(setList);
+  const [filter, setFilter] = useState<string>('unread');
+  const [acking, setAcking] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const load = async () => {
+    setLoading(true);
+    try { setList(await api.get('/monitor/alerts')); } catch { /* */ } finally { setLoading(false); }
+  };
   useEffect(() => { load(); const t = setInterval(load, 10000); return () => clearInterval(t); }, []);
   const unack = list.filter((a) => !a.ack);
+  const acked = list.length - unack.length;
+  const shown = filter === 'unread' ? unack : list;
+  const ackAll = async () => {
+    if (!unack.length) return;
+    setAcking(true);
+    setList((prev) => prev.map((a: any) => (a.ack ? a : { ...a, ack: true, ackTime: new Date().toISOString() })));
+    try { const r: any = await api.post('/monitor/alerts/ack', { all: true }); message.success(`已处理 ${r?.count ?? unack.length} 条告警`); await load(); }
+    catch (e: any) { message.error(e?.message || '操作失败'); await load(); }
+    finally { setAcking(false); }
+  };
+  const KIND: Record<string, { c: string; i: any }> = {
+    disk: { c: '#fa8c16', i: <HddOutlined /> },
+    memory: { c: '#eb2f96', i: <ThunderboltOutlined /> },
+    cpu: { c: '#f5222d', i: <ThunderboltOutlined /> },
+    host: { c: '#2f6bff', i: <DesktopOutlined /> },
+    service: { c: '#722ed1', i: <ApiOutlined /> },
+    net: { c: '#13c2c2', i: <ApiOutlined /> },
+  };
   const cols = [
-    { title: '级别', render: (_: any, r: any) => <Tag color={r.ack ? 'default' : 'error'}>{r.ack ? '已确认' : '未处理'}</Tag> },
-    { title: '类型', dataIndex: 'kind', render: (k: string) => <Tag color="volcano">{k}</Tag> },
-    { title: '主机', dataIndex: 'hostName' },
+    { title: '状态', width: 90, render: (_: any, r: any) => <Tag color={r.ack ? 'default' : 'error'} style={{ marginRight: 0 }}>{r.ack ? '已处理' : '未处理'}</Tag> },
+    {
+      title: '类型', dataIndex: 'kind', width: 120,
+      render: (k: string) => { const m = KIND[k] || { c: '#8c8c8c', i: <BellOutlined /> }; return <Tag color={m.c} style={{ marginRight: 0 }}>{m.i} {k}</Tag>; },
+    },
+    { title: '主机', dataIndex: 'hostName', width: 150, ellipsis: true },
     { title: '内容', dataIndex: 'message' },
-    { title: '时间', dataIndex: 'time', render: (t: string) => new Date(t).toLocaleString() },
-    { title: '操作', render: (_: any, r: any) => !r.ack && <Button size="small" onClick={async () => { await api.post('/monitor/alerts/ack', { id: r.id }); load(); }}>确认</Button> },
+    { title: '数值', dataIndex: 'value', width: 90, render: (v: string) => v ? <span style={{ color: '#ff4d4f', fontWeight: 600 }}>{v}</span> : '-' },
+    { title: '时间', dataIndex: 'time', width: 170, render: (t: string) => t ? new Date(t).toLocaleString('zh-CN', { hour12: false }) : '-' },
+    {
+      title: '操作', width: 90,
+      render: (_: any, r: any) => r.ack ? <span style={{ color: '#bbb' }}>—</span>
+        : <Button size="small" type="link" icon={<CheckOutlined />} onClick={async () => { setList((prev) => prev.map((x: any) => (x.id === r.id ? { ...x, ack: true } : x))); await api.post('/monitor/alerts/ack', { id: r.id }); load(); }}>已读</Button>,
+    },
   ];
-  return <Card size="small" title={`告警列表（未处理 ${unack.length}）`}>
-    {unack.length > 0 && <Alert type="warning" style={{ marginBottom: 12 }} showIcon message={`当前 ${unack.length} 条告警待处理`} />}
-    <Table rowKey="id" dataSource={list} columns={cols} size="middle" pagination={false} />
-  </Card>;
+  return (
+    <Card size="small" loading={loading && !list.length}
+      title={<Space><BellOutlined style={{ color: unack.length ? '#f5222d' : '#52c41a' }} />告警中心
+        <Tag color={unack.length ? 'red' : 'green'} style={{ marginRight: 0 }}>未处理 {unack.length}</Tag>
+        <Tag style={{ marginRight: 0 }}>已处理 {acked}</Tag></Space>}
+      extra={<Space wrap>
+        <Segmented size="small" value={filter} onChange={(v) => setFilter(String(v))}
+          options={[{ label: `未处理 ${unack.length}`, value: 'unread' }, { label: `全部 ${list.length}`, value: 'all' }]} />
+        <Button size="small" icon={<ReloadOutlined />} onClick={load}>刷新</Button>
+        <Button size="small" type="primary" icon={<CheckOutlined />} disabled={!unack.length} loading={acking} onClick={ackAll}>一键已读</Button>
+      </Space>}>
+      {unack.length > 0 && <Alert type="warning" style={{ marginBottom: 12 }} showIcon message={`当前 ${unack.length} 条告警待处理`}
+        action={<Button size="small" onClick={ackAll} loading={acking}>全部标记为已读</Button>} />}
+      <Table rowKey="id" dataSource={shown} columns={cols as any} size="middle" pagination={{ pageSize: 12, hideOnSinglePage: true }}
+        locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={filter === 'unread' ? '没有未处理告警' : '暂无告警'} /> }} />
+    </Card>
+  );
 }
 
 /* ============ 事件流(保持不变) ============ */
@@ -398,7 +444,7 @@ function SparkLine({ pts, color, get }: { pts: any[]; color: string; get: (p: an
   for (let i = 0; i < tickCount; i++) { const idx = Math.round((i * (n - 1)) / Math.max(1, tickCount - 1)); ticks.push({ x: P + idx * step, label: new Date(pts[idx].t).toLocaleTimeString('zh-CN', { hour12: false, hour: '2-digit', minute: '2-digit' }) }); }
   const last = vals[vals.length - 1];
   return (
-    <div style={{ border: '1px solid #eee', borderRadius: 8, background: '#fff', padding: 4 }}>
+    <div style={{ border: '1px solid var(--zs-border)', borderRadius: 8, background: 'var(--zs-surface)', padding: 4 }}>
       <svg viewBox={`0 0 ${W} ${H + 18}`} style={{ width: '100%', height: 'auto' }}>
         <defs>
           <linearGradient id={`g${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">

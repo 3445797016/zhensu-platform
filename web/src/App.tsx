@@ -5,7 +5,7 @@ import {
   ClusterOutlined, ControlOutlined, CodeOutlined, ToolOutlined, MessageOutlined, RocketOutlined,
   MonitorOutlined, BellOutlined, ApiOutlined, DatabaseOutlined, BookOutlined, SafetyCertificateOutlined,
   FolderOpenOutlined, HistoryOutlined, GlobalOutlined, FireOutlined, CloudDownloadOutlined, FileSearchOutlined, FileTextOutlined,
-  LockOutlined, UserOutlined, NodeIndexOutlined, ThunderboltOutlined,
+  LockOutlined, UserOutlined, NodeIndexOutlined, ThunderboltOutlined, BulbOutlined, BulbFilled,
 } from '@ant-design/icons';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
@@ -162,7 +162,7 @@ function PageBanner({ entry }: { entry: MenuEntry }) {
   );
 }
 
-export default function App() {
+export default function App({ dark, onToggleDark }: { dark: boolean; onToggleDark: () => void }) {
   const nav = useNavigate();
   const loc = useLocation();
   const [col, setCol] = useState(false);
@@ -191,13 +191,13 @@ export default function App() {
 
   return (
     <Layout style={{ height: '100vh', overflow: 'hidden' }}>
-      <Sider collapsible collapsed={col} onCollapse={setCol} width={228} theme="light"
-        style={{ borderRight: `1px solid ${token.colorBorderSecondary}`, background: '#fff', overflowY: 'auto', overflowX: 'hidden' }}>
-        <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: token.colorText, fontWeight: 700, fontSize: col ? 14 : 17, letterSpacing: 1, borderBottom: '1px solid #f1f4f9' }}>
+      <Sider collapsible collapsed={col} onCollapse={setCol} width={228} theme={dark ? 'dark' : 'light'}
+        style={{ borderRight: `1px solid ${token.colorBorderSecondary}`, background: token.colorBgContainer, overflowY: 'auto', overflowX: 'hidden' }}>
+        <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: token.colorText, fontWeight: 700, fontSize: col ? 14 : 17, letterSpacing: 1, borderBottom: `1px solid ${token.colorBorderSecondary}` }}>
           {!col && <><span style={{ width: 26, height: 26, borderRadius: 8, background: 'linear-gradient(135deg,#2f6bff,#7c3aed)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}><ApiOutlined /></span> 轸宿智汇</>}
           {col && <span style={{ width: 26, height: 26, borderRadius: 8, background: 'linear-gradient(135deg,#2f6bff,#7c3aed)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}><ApiOutlined /></span>}
         </div>
-        <Menu theme="light" mode="inline" selectedKeys={[sel]} items={groupedItems as any}
+        <Menu theme={dark ? 'dark' : 'light'} mode="inline" selectedKeys={[sel]} items={groupedItems as any}
           style={{ borderInlineEnd: 'none', paddingBlock: 6 }}
           onClick={(e) => nav(e.key)} />
       </Sider>
@@ -211,6 +211,9 @@ export default function App() {
             </div>
           </Space>
           <Space>
+            <Tooltip title={dark ? '切换到浅色模式' : '切换到深色模式'}>
+              <Button type="text" icon={dark ? <BulbFilled /> : <BulbOutlined />} onClick={onToggleDark} />
+            </Tooltip>
             <Tooltip title="在线编程"><Button type="link" icon={<CodeOutlined />} onClick={() => nav('/code')}>在线编程</Button></Tooltip>
             <HeaderTools />
           </Space>

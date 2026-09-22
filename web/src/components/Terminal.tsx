@@ -14,7 +14,10 @@ export default function TerminalModal({ host, open, onClose }: { host: any; open
 
   useEffect(() => {
     if (!open) return;
-    const term = new Terminal({ cursorBlink: true, fontSize: 13, theme: { background: '#ffffff', foreground: '#1f2328', cursor: '#1f2328', selectionBackground: '#d0e0ff', black: '#1f2328', white: '#6e7781' }, scrollback: 3000 });
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const term = new Terminal({ cursorBlink: true, fontSize: 13, theme: dark
+      ? { background: '#0b0f17', foreground: '#cbd5e1', cursor: '#cbd5e1', selectionBackground: '#2a3b5c' }
+      : { background: '#ffffff', foreground: '#1f2328', cursor: '#1f2328', selectionBackground: '#d0e0ff', black: '#1f2328', white: '#6e7781' }, scrollback: 3000 });
     const fit = new FitAddon();
     term.loadAddon(fit);
     term.open(boxRef.current!);
@@ -39,7 +42,7 @@ export default function TerminalModal({ host, open, onClose }: { host: any; open
   return (
     <Modal title={`终端 · ${host.name}`} width={820} open={open} onCancel={onClose} footer={null}
       style={{ top: 20 }} destroyOnClose
-      styles={{ body: { padding: 0, background: '#ffffff', borderRadius: 8 } }}>
+      styles={{ body: { padding: 0, background: 'var(--zs-surface)', borderRadius: 8 } }}>
       <div ref={boxRef} style={{ height: 460, padding: 4 }} />
     </Modal>
   );

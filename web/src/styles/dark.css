@@ -1,0 +1,57 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   深色模式覆盖层（在 global.css 之后加载）
+   仅针对自带 Hero/自定义样式的页面补足深色表面；antd 组件由 darkAlgorithm 接管
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-theme='dark'] body { background: var(--zs-bg); }
+
+/* 深色下统一代码/输出块为深底浅字(覆盖内联浅色样式) */
+[data-theme='dark'] pre {
+  background: #0f172a !important;
+  color: #cbd5e1 !important;
+  border-color: #263043 !important;
+}
+
+/* ── 网络工具箱 ───────────────────────────────────────────────────────── */
+[data-theme='dark'] .nt-rail { background: var(--zs-surface); border-color: var(--zs-border); }
+[data-theme='dark'] .nt-tool:hover { background: var(--zs-hover); }
+[data-theme='dark'] .nt-tool.active { background: linear-gradient(90deg, rgba(47, 107, 255, .2), rgba(45, 212, 191, .12)); border-color: #2a3b5c; }
+[data-theme='dark'] .nt-tool-desc,
+[data-theme='dark'] .nt-empty,
+[data-theme='dark'] .nt-stat .l,
+[data-theme='dark'] .nt-field-label,
+[data-theme='dark'] .nt-kv .k,
+[data-theme='dark'] .nt-bin .lbl { color: var(--zs-text-2); }
+[data-theme='dark'] .nt-statusbar { background: var(--zs-surface-2); border-color: var(--zs-border); }
+[data-theme='dark'] .nt-cmd { background: var(--zs-border-2); color: var(--zs-text-2); }
+[data-theme='dark'] .nt-pre.light { background: var(--zs-surface-2); color: var(--zs-text); border-color: var(--zs-border); }
+[data-theme='dark'] .nt-stat { background: var(--zs-surface); border-color: var(--zs-border); }
+[data-theme='dark'] .nt-spark { background: var(--zs-surface-2); border-color: var(--zs-border); }
+[data-theme='dark'] .nt-bar { background: var(--zs-border-2); }
+[data-theme='dark'] .nt-bar > span { color: var(--zs-text); }
+[data-theme='dark'] .nt-timing { background: var(--zs-border-2); }
+[data-theme='dark'] .nt-resolver { background: var(--zs-surface); border-color: var(--zs-border); }
+[data-theme='dark'] .nt-resolver .ans code,
+[data-theme='dark'] .nt-san code { background: var(--zs-border-2); color: var(--zs-text); }
+[data-theme='dark'] .nt-hist-item { border-color: var(--zs-border); }
+[data-theme='dark'] .nt-hist-item:hover { background: var(--zs-hover); }
+
+/* ── PentAGI ──────────────────────────────────────────────────────────── */
+[data-theme='dark'] .pg-stat { border-color: var(--zs-border); }
+[data-theme='dark'] .pg-timeline-msg { background: var(--zs-surface-2); border-color: var(--zs-border); }
+[data-theme='dark'] .pg-drawer-body { background: var(--zs-bg); }
+
+/* ── Dashboard ────────────────────────────────────────────────────────── */
+[data-theme='dark'] .dash-kpi { border-color: var(--zs-border); }
+[data-theme='dark'] .dash-stack { background: var(--zs-border-2); }
+[data-theme='dark'] .dash-ns-bar { background: var(--zs-border-2); }
+[data-theme='dark'] .dash-ns-name,
+[data-theme='dark'] .dash-legend-item { color: var(--zs-text-2); }
+[data-theme='dark'] .dash-alert-item:hover { background: var(--zs-hover); }
+[data-theme='dark'] .dash-link { border-color: var(--zs-border); background: var(--zs-surface); }
+[data-theme='dark'] .dash-link:hover { border-color: #2a3b5c; }
+
+/* ── 通用: 内联白色小面板兜底 ─────────────────────────────────────────── */
+[data-theme='dark'] .ant-descriptions-bordered .ant-descriptions-view { border-color: var(--zs-border); }
+[data-theme='dark'] .ant-modal-content,
+[data-theme='dark'] .ant-drawer-content { background: var(--zs-surface); }
