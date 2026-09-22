@@ -9,11 +9,119 @@
 
 <!-- 从这里开始，记录当前正在做什么 -->
 
-**未设定** — 在靶机上部署 MinIO 实现高可用（来自上次会话遗留）
+**网络工具箱 v2 重构** — 后端从 8 个拼 shell 字符串的接口升级为 14 个 argv 安全接口；前端由单文件表单重做为 Hero + 工具导航 + 可视化结果页
+
+---
+
+### 2026-09-11 — 全功能测试 + Bug 修复 → VPN 模块集成
+
+- **目标**：全面测试所有功能模块 API，寻找并修复 Bug
+- **测试结果**：28/28 API endpoints 全部正常响应
+- **已修复 Bug**：
+  - **BUG-1 (中)**：端口探测误报 — harbor/gitlab/dvwa 因 nginx 占用端口 80 被误判为 detected
+    - 修复：在探测命令中加入进程名检查（`ss -tlnp`），对比进程名与工具 ID
+    - 文件：`server/src/modules/tools.ts` — `probeTool()` 函数
+    - 并发现 prometheus 之前也是误报（端口 9090 上实际是 clash 进程），现已修正
+  - **BUG-2 (中)**：`Hosts.tsx` 多处 API 调用缺少 try/catch — 修复 load/save/showMetrics/testConn/runCmd
+  - **BUG-3 (中)**：`Agents.tsx` load() 中 API 调用缺少 try/catch — 添加错误处理和错误提示
+  - **BUG-4 (中)**：`KnowledgeBase.tsx` 多处 API 调用缺少 try/catch — 修复 load/rebuild/toggle/doSearch
+- **确认无 Bug**：
+  - MongoDB 探测已正确显示 detected=True, running=True ✅
+  - Dashboard 前端聚合 6 个 API 工作正常 ✅
+  - AI 对话 SSE 流式输出正常 ✅
+  - 所有模块返回正确状态码和数据 ✅
+- **下一步**：决定是否修复 BUG-1 级别的其他遗漏，或切换至 MinIO 高可用部署
 
 ---
 
 ## 会话历史
+
+### 2026-09-22 — 网络工具箱 v2（功能 + 界面全面重构）
+
+- **背景**：用户反馈「网络工具箱功能和界面都太简陋」
+- **后端** `server/src/routes/net.ts` 重写：
+  - **安全**：全部改用 `spawnSync(argv 数组)`，不再拼接 shell；输入统一校验(域名/IP/端口/URL)，拒绝以 `-` 开头的参数 → 消除命令注入
+  - **接口 8 → 14**：`capabilities`、`info`(网卡/路由)、`dns`、`dns-propagation`(7 解析器对比)、`reverse`、`nslookup`、`ping`、`tcp-ping`(纯 Node net.Socket)、`port-scan`(nmap，缺失时内置扫描降级)、`traceroute`、`mtr`(缺失时 traceroute 降级)、`whois`、`http`(计时/头/体重定向链)、`headers`、`tls`(openssl 证书解析)、`subnet`(纯计算)；保留旧 `dig/curl` 别名
+  - **结构化返回**：records/byType、ping stat+每包时延、hops、open ports、cert(剩余天数/SAN/链)、子网二进制等，前端直接渲染
+  - 所有 handler 经 `guard()` 捕获异常 → 返回 `{ok:false,error}`，前端提示友好
+- **前端** `web/src/pages/NetTools.tsx` + `net-tools.css` 重做：
+  - Hero 横幅(可用命令能力胶囊 + 可用工具计数 + 历史抽屉)
+  - 左侧分组工具导航(缺失依赖自动置灰)，右侧「参数表单 → 运行 → 可视化结果」
+  - 每类工具定制可视化：DNS 记录表 / 解析器对比网格 / Ping 统计+每包时延柱 / 端口表 / 路由逐跳时延条 / MTR 丢包表 / HTTP 计时瀑布+响应头+响应体 / 证书剩余天数+SAN / 子网二进制 / 网卡路由表
+  - 通用能力：可视化↔原始切换、复制、下载、执行历史(localStorage 30 条，可回填重跑)
+- **修复**：
+  - nmap 输出解析跨行吞行 bug（`\s*` 匹配换行 → 改 `[ \t]`）
+  - DNS 默认 `+noall +answer` 去掉 authority/additional 噪音
+  - TLS 成功时不再把 openssl 的 verify 日志当作 error
+- **验证**：
+  - `server` / `web` 双双 `tsc --noEmit` 通过；`vite build` 通过
+  - 全部接口 curl 实测通过（含超时/非法输入防护）
+  - Chromium 无头 + CDP 端到端：12 个工具全部「选择→填参→运行→可视化渲染」成功，**0 个 JS 异常**
+- **文件**：`server/src/routes/net.ts`、`web/src/pages/NetTools.tsx`、`web/src/pages/net-tools.css`
+- **部署**：`web/dist` 已重新构建，`opshub.service` 正常
+- **下一步**：可按需把 tcp-ping 结果做多轮趋势、或给端口扫描加常用服务指纹库
+
+### 2026-09-19 — PentAGI AI 渗透集成落地（可迁移模块）
+
+- **目标**：把已部署的 PentAGI（AI 自动化渗透测试引擎）深度融合进运维平台，且新增代码独立可迁移
+- **方案**：不对 PentAGI 的 38.6 万行源码做抽取（耦合过深），改为在其 **REST API 之上做适配层**
+- **产出（自包含、可整体搬迁）**：
+  - 后端 `server/src/pentagi/`：`config.ts` / `client.ts` / `index.ts` / `README.md`
+  - 前端 `web/src/pentagi/`：`api.ts` / `PentagiPage.tsx` / `README.md`
+- **注册接线（仅 2 处）**：`server/src/index.ts` 注册路由、`web/src/App.tsx` 加菜单+路由
+- **验证**：
+  - `tsc --noEmit` server / web 双双通过；`vite build` 通过
+  - 连接 PentAGI（`https://127.0.0.1:8443`，账号模式）→ 配置加密落盘 → 连通测试 OK
+  - 实拉 Flow 2「Windows Host Pentest Lab」详情：1 task / 12 subtasks / 31 msglogs / 32 termlogs / 6 agentlogs
+- **顺带修复的既有类型错误**（与 pentagi 无关）：`notebook.ts`、`notify-channels.ts`(`fastify.del`→`delete`)、`tunnels.ts`(缺 `join` 导入)、`Markdown.tsx`(react-markdown v10 移除 `inline`)、`Docker.tsx`、`Tunnels.tsx`(无效图标)、`VPN.tsx`
+- **下一步**：前端页面联调走查；按需补充从靶机库一键下发任务的联动
+
+### 2026-09-19 — PentAGI 前端界面重做（告别“简陋”）
+
+- **背景**：初版页面只有表格 + 基础弹窗，观感单薄
+- **产出**：
+  - `web/src/pentagi/lib.ts` — 展示层纯函数（目标/端口/CVE 提取、CVE 名称与危害级别、时长/相对时间、靶机画像解析）
+  - `web/src/pentagi/MissionDrawer.tsx` — 「任务控制台」抽屉
+  - `web/src/pentagi/pentagi.css` — Hero 渐变 / 统计卡 / 状态脉冲 / 终端外观 / 风险卡
+  - `PentagiPage.tsx` 重写：Hero 横幅 + 概览统计 + 状态筛选/搜索 + 增强任务列表
+- **亮点**：
+  - **风险发现**：自动提取 CVE 并匹配 MS17-010/BlueKeep 等，标注“已验证可利用” + 证据片段
+  - **靶机画像**：解析主机名/OS/工作组/开放端口
+  - **执行时间线**：思考/执行/汇报分色可视化，可展开思考与结果
+  - **终端控制台**：stdout/stderr/stdin 过滤、自动滚动、复制、下载
+  - **阶段报告**：Markdown 渲染，逐条展开
+  - **深链接**：`?flow=<id>&tab=<overview|timeline|subtasks|agents|console|raw>`
+- **验证**：`tsc` + `vite build` 通过；用 Chromium 无头渲染逐页面（主页 + 6 个标签）确认无运行时错误
+- **下一步**：—
+
+### 2026-09-19 — 总览 Dashboard 界面升级
+
+- **背景**：首页为普通卡片 + Statistic，观感平实
+- **产出**：`web/src/pages/dashboard.css` + `Dashboard.tsx` 重写
+- **亮点**：
+  - **Hero 问候横幅**：按时段问候 + 实时时钟 + 一键刷新 + 状态胶囊（健康度/主机/容器/Pod/告警）
+  - **6 张 KPI 卡**：左侧色条 + 渐变图标 + 进度条（Agent/Docker/K8s/安全扫描/告警）
+  - **平台健康度**：圆环渐变进度 + 4 项服务状态 + 24 次趋势面积图
+  - **资源态势**：Docker 运行/暂停/停止堆叠条 + K8s 命名空间 Pod 条形图
+  - **进行中告警**：按 类型+主机+数值 去重聚合，标注重复次数与处理状态
+  - **最近活动**（审计流水）、**最近任务**、**巡检报告**、**快捷入口**（8 个模块）
+- **性能优化**：`load()` 改为“每个接口先到先渲染”，避免被 `k8s/summary`（~7s）阻塞首屏
+- **验证**：`tsc` + `vite build` 通过；Chromium 无头渲染确认 4s 内首屏完整、k8s 数据后补、无运行时错误
+
+### 2026-09-19 — 告警一键已读 + 全局界面优化
+
+- **告警一键已读**：
+  - 后端 `POST /monitor/alerts/ack` 扩展：支持 `{id}` 单条 / `{ids:[...]}` 批量 / `{all:true}` 全部，返回 `count`
+  - 顶部铃铛弹层重做：未读统计、全部/未读切换、类型图标与颜色、相对时间、单条已读、**一键已读**、打开即刷新
+  - 告警中心页：KPI 标题、状态筛选、一键已读、类型图标、数值列
+  - 两个入口都做了 **乐观更新**，点击立即反馈
+  - 修复旧接口在 `id` 缺失时会插入脏记录的 bug（已清理历史脏数据）
+- **顶部栏**：改为“当前模块图标 + 名称 + 平台副标题”的面包屑样式，全局统一
+- **任务中心**：KPI 卡 + 状态筛选/搜索 + 状态圆点/耗时/相对时间 + 日志控制台（复制/下载）
+- **知识库**：KPI 卡 + 索引进度 + 文档筛选 + 检索结果评分进度条与关键词高亮
+- **性能**：铃铛 `refresh()` 改为并行请求，避免被慢接口拖住
+- **踩坑**：JSX 子表达式中的 `>`（如 `{arr.length > 0 && ...}`）会触发 TS1005，改用三元表达式
+- **验证**：`tsc` + `vite build` 通过；CDP 实测铃铛“一键已读”点击后服务端 `未读=0`、UI 即时更新
 
 ### 2026-09-11 — MinIO 高可用部署讨论
 
