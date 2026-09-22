@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { ConfigProvider, App as AntApp, theme } from 'antd';
@@ -6,8 +6,10 @@ import zhCN from 'antd/locale/zh_CN';
 import 'antd/dist/reset.css';
 import './styles/global.css';
 import './styles/dark.css';
+import './styles/wallpaper.css';
 import './monaco-setup';   // 必须在任何 MonacoEditor 渲染前执行(本地加载 monaco)
 import App from './App';
+import { AppearanceProvider, useAppearance } from './appearance';
 
 function buildTheme(dark: boolean) {
   return {
@@ -49,20 +51,13 @@ function buildTheme(dark: boolean) {
   } as const;
 }
 
-function Root() {
-  const [dark, setDark] = useState(() => {
-    try { return localStorage.getItem('zs-theme') === 'dark'; } catch { return false; }
-  });
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-    try { localStorage.setItem('zs-theme', dark ? 'dark' : 'light'); } catch { /* ignore */ }
-  }, [dark]);
-
+function ThemedApp() {
+  const { dark } = useAppearance();
   return (
     <ConfigProvider locale={zhCN} theme={buildTheme(dark) as any}>
       <AntApp>
         <BrowserRouter>
-          <App dark={dark} onToggleDark={() => setDark((d) => !d)} />
+          <App />
         </BrowserRouter>
       </AntApp>
     </ConfigProvider>
@@ -71,6 +66,8 @@ function Root() {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <Root />
+    <AppearanceProvider>
+      <ThemedApp />
+    </AppearanceProvider>
   </React.StrictMode>
 );

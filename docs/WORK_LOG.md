@@ -57,12 +57,17 @@
   - 累计 **26 个页面**完成内容级升级；每批均 `tsc` + `vite build` + Chromium 无头冒烟（0 JS 异常）后提交
 - **保持原样（已属工作区/自定义视觉，仅受全局主题影响）**：Code（编辑器）、Solve（力扣式）、AIChat（对话）、Notebook（交互脚本）、Monitoring（已有图表仪表）、DevOpsCI（卡片密集）
 - **深色模式（`b652e93`）**：全局可切换 + localStorage 持久化
-  - `main.tsx` 引入 `Root`：antd `darkAlgorithm` + 深浅两套 token；html[data-theme] 同步
+  - `main.tsx` 引入 `AppearanceProvider`：antd `darkAlgorithm` + 深浅两套 token；html[data-theme] 同步
   - `App.tsx` 头部灯泡按钮；侧栏/Menu/Layout 随主题
   - `global.css` 改用 CSS 变量（`--zs-*`）；新增 `styles/dark.css` 覆盖网络工具箱/PentAGI/Dashboard 与 `pre` 代码块
   - 11 处自定义组件/页面的内联浅色面板改为 `var(--zs-*)`（Markdown/Terminal/CodeAssistant/HostOps/AIChat/Monitoring/ReportPage/SystemCenter/JenkinsBuild/Solve/MissionDrawer）；DevOpsCI 选中高亮改半透明主色
   - 验证：深色下逐路由检查 body `#0b0f17`、大面积白面板 **0**、JS 异常 **0**
-- **下一步**：可继续把上面这些工作区页的顶部工具条/空态统一；或补充全局深色模式
+- **壁纸 / 外观（本次新增）**：头部 🖼 按钮打开「外观 / 壁纸」抽屉
+  - 配置：`web/src/appearance.tsx`（AppearanceProvider + WallpaperLayer）、`components/AppearancePanel.tsx`、`styles/wallpaper.css`
+  - 类型：无 / 渐变(8 预设) / 单色(取色器) / 图片(URL 或本地上传 ≤2.5MB dataURL)
+  - 可调：图片暗化遮罩、模糊、毛玻璃（卡片/侧栏半透明透出壁纸）；localStorage 持久化
+  - 验证：CDP 实测渐变/图片/模糊/暗化/毛玻璃/深色组合均生效并持久化，0 JS 异常
+- **下一步**：可继续做「主题色自定义」或「移动端适配」
 
 ### 2026-09-22 — 网络工具箱 v2（功能 + 界面全面重构）
 

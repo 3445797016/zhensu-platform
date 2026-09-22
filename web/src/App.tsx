@@ -5,7 +5,7 @@ import {
   ClusterOutlined, ControlOutlined, CodeOutlined, ToolOutlined, MessageOutlined, RocketOutlined,
   MonitorOutlined, BellOutlined, ApiOutlined, DatabaseOutlined, BookOutlined, SafetyCertificateOutlined,
   FolderOpenOutlined, HistoryOutlined, GlobalOutlined, FireOutlined, CloudDownloadOutlined, FileSearchOutlined, FileTextOutlined,
-  LockOutlined, UserOutlined, NodeIndexOutlined, ThunderboltOutlined, BulbOutlined, BulbFilled,
+  LockOutlined, UserOutlined, NodeIndexOutlined, ThunderboltOutlined, BulbOutlined, BulbFilled, PictureOutlined,
 } from '@ant-design/icons';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Dashboard from './pages/Dashboard';
@@ -40,6 +40,8 @@ import DatabaseCenter from './pages/DatabaseCenter';
 // PentAGI 集成（可迁移模块，见 web/src/pentagi/README.md）
 import PentagiPage from './pentagi/PentagiPage';
 import HeaderTools from './components/AccountCenter';
+import AppearancePanel from './components/AppearancePanel';
+import { useAppearance, WallpaperLayer } from './appearance';
 
 const { Sider, Header, Content } = Layout;
 
@@ -162,10 +164,12 @@ function PageBanner({ entry }: { entry: MenuEntry }) {
   );
 }
 
-export default function App({ dark, onToggleDark }: { dark: boolean; onToggleDark: () => void }) {
+export default function App() {
+  const { dark, setDark } = useAppearance();
   const nav = useNavigate();
   const loc = useLocation();
   const [col, setCol] = useState(false);
+  const [appOpen, setAppOpen] = useState(false);
   const { token } = theme.useToken();
   const sel = loc.pathname.startsWith('/solve') ? '/problems' : '/' + (loc.pathname.split('/')[1] || '');
   const current = MENU.find((m) => m.key === sel) || MENU[0];
@@ -190,7 +194,10 @@ export default function App({ dark, onToggleDark }: { dark: boolean; onToggleDar
   })).filter((g) => g.children.length);
 
   return (
-    <Layout style={{ height: '100vh', overflow: 'hidden' }}>
+    <>
+      <WallpaperLayer />
+      <AppearancePanel open={appOpen} onClose={() => setAppOpen(false)} />
+      <Layout style={{ height: '100vh', overflow: 'hidden' }}>
       <Sider collapsible collapsed={col} onCollapse={setCol} width={228} theme={dark ? 'dark' : 'light'}
         style={{ borderRight: `1px solid ${token.colorBorderSecondary}`, background: token.colorBgContainer, overflowY: 'auto', overflowX: 'hidden' }}>
         <div style={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: token.colorText, fontWeight: 700, fontSize: col ? 14 : 17, letterSpacing: 1, borderBottom: `1px solid ${token.colorBorderSecondary}` }}>
@@ -211,8 +218,11 @@ export default function App({ dark, onToggleDark }: { dark: boolean; onToggleDar
             </div>
           </Space>
           <Space>
+            <Tooltip title="外观 / 壁纸">
+              <Button type="text" icon={<PictureOutlined />} onClick={() => setAppOpen(true)} />
+            </Tooltip>
             <Tooltip title={dark ? '切换到浅色模式' : '切换到深色模式'}>
-              <Button type="text" icon={dark ? <BulbFilled /> : <BulbOutlined />} onClick={onToggleDark} />
+              <Button type="text" icon={dark ? <BulbFilled /> : <BulbOutlined />} onClick={() => setDark(!dark)} />
             </Tooltip>
             <Tooltip title="在线编程"><Button type="link" icon={<CodeOutlined />} onClick={() => nav('/code')}>在线编程</Button></Tooltip>
             <HeaderTools />
@@ -261,5 +271,6 @@ export default function App({ dark, onToggleDark }: { dark: boolean; onToggleDar
         </Content>
       </Layout>
     </Layout>
+    </>
   );
 }

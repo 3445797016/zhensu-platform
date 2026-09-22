@@ -1,0 +1,38 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   壁纸 / 毛玻璃
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.zs-wallpaper {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  transition: opacity .3s ease;
+}
+
+/* 有壁纸时: 让页面底色透出壁纸 */
+html.zs-has-wallpaper body,
+html.zs-has-wallpaper .ant-layout { background: transparent !important; }
+
+#root { position: relative; z-index: 1; }
+
+/* 毛玻璃: 卡片 / 侧栏 / 顶栏 半透明, 透出壁纸 */
+html.zs-glass .ant-card {
+  background: color-mix(in srgb, var(--zs-surface) 80%, transparent) !important;
+  backdrop-filter: blur(12px) saturate(1.1);
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
+}
+html.zs-glass .ant-layout-sider,
+html.zs-glass .ant-layout-header {
+  background: color-mix(in srgb, var(--zs-surface) 78%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(1.15);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+}
+html.zs-glass .ant-menu-light,
+html.zs-glass .ant-menu-dark { background: transparent !important; }
+html.zs-glass .ant-modal-content,
+html.zs-glass .ant-drawer-content { backdrop-filter: blur(14px); }
