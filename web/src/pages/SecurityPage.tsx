@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Card, Tag, Space, Select, Input, Collapse, Alert, Switch, Tooltip, Button, Empty, Divider, Badge, Typography, Statistic, Progress, List,
+  Card, Tag, Space, Select, Input, Collapse, Alert, Switch, Tooltip, Button, Empty, Divider, Badge, Typography, Progress, List,
 } from 'antd';
 import {
   SafetyCertificateOutlined, PlayCircleOutlined, CopyOutlined, CloseCircleOutlined, CheckCircleOutlined,
   ExclamationCircleOutlined, FieldTimeOutlined, ReloadOutlined, BugOutlined, ApiOutlined,
 } from '@ant-design/icons';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 import TargetCenter from '../components/TargetCenter';
 import SecTargets from '../components/SecTargets';
 
@@ -99,11 +100,11 @@ export default function SecurityPage() {
       <SecTargets />
 
       {metrics && <Card size="small" style={{ marginBottom: 14 }} title={<Space><SafetyCertificateOutlined style={{ color: '#13c2c2' }} /><b>安全能力健康度</b><Typography.Text type="secondary" style={{ fontSize: 12 }}>每 10 秒刷新</Typography.Text></Space>}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10, marginBottom: 14 }}>
-          <Card size="small"><Statistic title="可执行工具" value={metrics.available} suffix={`/ ${metrics.total}`} valueStyle={{ color: metrics.available === metrics.total ? '#389e0d' : '#d48806' }} /></Card>
-          <Card size="small"><Statistic title="危险工具" value={metrics.dangerous} suffix=" 个" valueStyle={{ color: '#cf1322' }} /></Card>
-          <Card size="small"><Statistic title="最近执行成功率" value={metrics.successRate == null ? '—' : metrics.successRate} suffix={metrics.successRate == null ? '' : '%'} /></Card>
-          <Card size="small"><Statistic title="最近执行次数" value={metrics.recent?.length || 0} suffix=" 次" /></Card>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 10, marginBottom: 14 }}>
+          <StatCard title="可执行工具" value={metrics.available} suffix={`/ ${metrics.total}`} color={metrics.available === metrics.total ? '#16a34a' : '#f59e0b'} icon={<CheckCircleOutlined />} />
+          <StatCard title="危险工具" value={metrics.dangerous} suffix=" 个" color="#ef4444" icon={<BugOutlined />} />
+          <StatCard title="最近执行成功率" value={metrics.successRate == null ? '—' : metrics.successRate} suffix={metrics.successRate == null ? '' : '%'} color="#7c3aed" icon={<FieldTimeOutlined />} progress={metrics.successRate == null ? undefined : metrics.successRate} />
+          <StatCard title="最近执行次数" value={metrics.recent?.length || 0} suffix=" 次" color="#2f6bff" icon={<FieldTimeOutlined />} />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 12 }}>
           {Object.entries(metrics.byGroup || {}).map(([name, stat]: any) => <div key={name}>

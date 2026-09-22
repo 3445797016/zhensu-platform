@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import {
-  Card, Tabs, Table, Tag, Space, Button, Select, Input, Modal, message, Alert, Popconfirm, Row, Col, Statistic, Tooltip, Typography,
+  Card, Tabs, Table, Tag, Space, Button, Select, Input, Modal, message, Alert, Popconfirm, Row, Col, Tooltip, Typography,
 } from 'antd';
 import { FireOutlined, PlusOutlined, ReloadOutlined, DeleteOutlined, LockOutlined, UnlockOutlined, GlobalOutlined } from '@ant-design/icons';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 
 export default function Firewall() {
   const [d, setD] = useState<any>(null);
@@ -17,15 +18,15 @@ export default function Firewall() {
           <Tag color={d?.ufw ? 'green' : 'blue'}>{d?.ufw ? 'ufw 状态化防火墙' : 'iptables'}</Tag>
           {d && <span style={{ fontSize: 12, color: '#888' }}>监听服务 {d.listening?.length} 个 · 规则 {d.ruleCount} 条</span>}
         </Space>}
-        extra={<Space><Button icon={<ReloadOutlined />} onClick={load}>刷新</Button></Space>}>
+        extra={<Space><Button icon={<LockOutlined />} onClick={() => setPolicyOpen(true)}>调整默认策略</Button><Button icon={<ReloadOutlined />} onClick={load}>刷新</Button></Space>}>
         <Alert type="warning" showIcon style={{ marginBottom: 12 }} message="规则直接作用于 INPUT 链。误删/误拒可能断连,请勿封禁 SSH(22)与面板端口。" />
-        <Row gutter={12} style={{ marginBottom: 12 }}>
-          <Col span={4}><Card size="small"><Statistic title="默认策略(INPUT)" value={d?.policy || '-'} valueStyle={{ color: d?.policy === 'DROP' ? '#ff4d4f' : '#52c41a' }} suffix={<Button size="small" type="link" icon={<LockOutlined />} onClick={() => setPolicyOpen(true)}>调整</Button>} /></Card></Col>
-          <Col span={4}><Card size="small"><Statistic title="规则总数" value={d?.ruleCount || 0} /></Card></Col>
-          <Col span={4}><Card size="small"><Statistic title="累计流量" value={fmtBytes(d?.bytes)} /></Card></Col>
-          <Col span={4}><Card size="small"><Statistic title="累计包数" value={d?.pkts || 0} /></Card></Col>
-          <Col span={4}><Card size="small"><Statistic title="被拒绝命中" value={d?.deniedPkts || 0} valueStyle={{ color: d?.deniedPkts ? '#faad14' : undefined }} /></Card></Col>
-          <Col span={4}><Card size="small"><Statistic title="监听端口" value={d?.listening?.length || 0} /></Card></Col>
+        <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
+          <Col xs={12} sm={8} md={4}><StatCard title="默认策略(INPUT)" value={d?.policy || '-'} color={d?.policy === 'DROP' ? '#ef4444' : '#16a34a'} icon={<LockOutlined />} /></Col>
+          <Col xs={12} sm={8} md={4}><StatCard title="规则总数" value={d?.ruleCount || 0} color="#2f6bff" icon={<FireOutlined />} /></Col>
+          <Col xs={12} sm={8} md={4}><StatCard title="累计流量" value={fmtBytes(d?.bytes)} color="#0891b2" icon={<GlobalOutlined />} /></Col>
+          <Col xs={12} sm={8} md={4}><StatCard title="累计包数" value={d?.pkts || 0} color="#7c3aed" icon={<UnlockOutlined />} /></Col>
+          <Col xs={12} sm={8} md={4}><StatCard title="被拒绝命中" value={d?.deniedPkts || 0} color={d?.deniedPkts ? '#f59e0b' : '#94a3b8'} /></Col>
+          <Col xs={12} sm={8} md={4}><StatCard title="监听端口" value={d?.listening?.length || 0} color="#16a34a" icon={<GlobalOutlined />} /></Col>
         </Row>
       </Card>
       <Card size="small" styles={{ body: { padding: 0 } }}>

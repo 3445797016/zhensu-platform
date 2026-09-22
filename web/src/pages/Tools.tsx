@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Select, Button, Space, Tag, Card, Row, Col, Spin, App, Drawer, Descriptions, Empty, Alert, Statistic, Badge, Collapse, Modal, Input, Popconfirm, Popover, Tooltip, Divider } from 'antd';
-import { ReloadOutlined, ScanOutlined, RocketOutlined, DeleteOutlined, SettingOutlined, FileTextOutlined, PauseCircleOutlined, PlayCircleOutlined, ExperimentOutlined } from '@ant-design/icons';
+import { Select, Button, Space, Tag, Card, Row, Col, Spin, App, Drawer, Descriptions, Empty, Alert, Badge, Collapse, Modal, Input, Popconfirm, Popover, Tooltip, Divider } from 'antd';
+import { ReloadOutlined, ScanOutlined, RocketOutlined, DeleteOutlined, SettingOutlined, FileTextOutlined, PauseCircleOutlined, PlayCircleOutlined, ExperimentOutlined, AppstoreOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 
 const CAT_LABEL: any = { observability: '可观测性', data: '数据存储', messaging: '消息队列', cache: '缓存', gateway: '网关', container: '容器管理', monitor: '监控', storage: '存储', devops: 'DevOps', security: '渗透测试' };
 const CAT_COLOR: any = { observability: 'geekblue', data: 'green', messaging: 'purple', cache: 'volcano', gateway: 'cyan', container: 'blue', monitor: 'magenta', storage: 'orange', devops: 'gold', security: 'red' };
@@ -107,11 +108,11 @@ export default function Tools() {
         </Card>
       )}
 
-      {scan?.summary && <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col span={4}><Card size="small"><Statistic title="工具总数" value={scan.summary.total} /></Card></Col>
-        <Col span={4}><Card size="small"><Statistic title="已检测到" value={scan.summary.detected} valueStyle={{ color: '#52c41a' }} /></Card></Col>
-        <Col span={4}><Card size="small"><Statistic title="运行中" value={scan.summary.running} valueStyle={{ color: '#4f8cff' }} /></Card></Col>
-        <Col span={12}><Card size="small" title="按类别">{(Object.entries(scan.summary.byCategory || {}) as any).map(([c, v]: any) => <Tag key={c} color={CAT_COLOR[c]}>{CAT_LABEL[c]}: {v}</Tag>)}</Card></Col>
+      {scan?.summary && <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+        <Col xs={12} sm={6}><StatCard title="工具总数" value={scan.summary.total} icon={<AppstoreOutlined />} color="#2f6bff" /></Col>
+        <Col xs={12} sm={6}><StatCard title="已检测到" value={scan.summary.detected} icon={<CheckCircleOutlined />} color="#16a34a" /></Col>
+        <Col xs={12} sm={6}><StatCard title="运行中" value={scan.summary.running} icon={<PlayCircleOutlined />} color="#0891b2" /></Col>
+        <Col xs={24} sm={6}><Card size="small" style={{ height: '100%' }} title="按类别">{(Object.entries(scan.summary.byCategory || {}) as any).map(([c, v]: any) => <Tag key={c} color={CAT_COLOR[c]}>{CAT_LABEL[c]}: {v}</Tag>)}</Card></Col>
       </Row>}
 
       {Object.keys(catalog.categories).map((cat) => {

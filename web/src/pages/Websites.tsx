@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import {
-  Card, Table, Tag, Space, Button, Modal, Form, Input, Switch, Select, Alert, message, Popconfirm, Tabs, Tooltip, Typography,
+  Card, Table, Tag, Space, Button, Modal, Form, Input, Switch, Select, Alert, message, Popconfirm, Tabs, Tooltip, Typography, Row, Col,
 } from 'antd';
-import { PlusOutlined, GlobalOutlined, SafetyCertificateOutlined, ReloadOutlined, EditOutlined, EyeOutlined, PoweroffOutlined, CaretUpOutlined } from '@ant-design/icons';
+import { PlusOutlined, GlobalOutlined, SafetyCertificateOutlined, ReloadOutlined, EditOutlined, EyeOutlined, PoweroffOutlined, CaretUpOutlined, CheckCircleOutlined, ApiOutlined } from '@ant-design/icons';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 
 const { Text } = Typography;
 
@@ -95,6 +96,12 @@ export default function Websites() {
     </Space>}
       extra={<Space><Button icon={<ReloadOutlined />} onClick={load}>刷新</Button><Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新建站点</Button></Space>}>
       {!data.nginx?.present && <Alert type="warning" showIcon style={{ marginBottom: 10 }} message="本机未检测到 nginx,配置将在检测到 nginx 后自动下发;当前可先保存站点定义。" />}
+      <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
+        <Col xs={12} md={6}><StatCard title="站点总数" value={(data.sites || []).length} icon={<GlobalOutlined />} color="#2f6bff" /></Col>
+        <Col xs={12} md={6}><StatCard title="已启用" value={(data.sites || []).filter((s: any) => s.enabled !== false).length} icon={<CheckCircleOutlined />} color="#16a34a" /></Col>
+        <Col xs={12} md={6}><StatCard title="HTTPS" value={(data.sites || []).filter((s: any) => s.ssl).length} icon={<SafetyCertificateOutlined />} color="#0891b2" /></Col>
+        <Col xs={12} md={6}><StatCard title="反向代理" value={(data.sites || []).filter((s: any) => s.proxy_pass).length} icon={<ApiOutlined />} color="#7c3aed" /></Col>
+      </Row>
       <Table rowKey="id" size="small" dataSource={data.sites} columns={cols as any} pagination={false} />
 
       <Modal title={edit ? '编辑站点(保存即下发 nginx)' : '新建站点'} width={780} open={open} onCancel={() => setOpen(false)} onOk={save} okText={edit ? '保存并下发' : '创建'} confirmLoading={load2} destroyOnClose>

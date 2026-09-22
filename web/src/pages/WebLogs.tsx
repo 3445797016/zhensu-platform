@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Card, Table, Tag, Space, Button, Input, Select, Row, Col, Statistic, message, Alert } from 'antd';
-import { FileSearchOutlined } from '@ant-design/icons';
+import { Card, Table, Tag, Space, Button, Input, Select, Row, Col, message, Alert } from 'antd';
+import { FileSearchOutlined, ApiOutlined, CheckCircleOutlined, WarningOutlined, CloseCircleOutlined, FileTextOutlined } from '@ant-design/icons';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 
 export default function WebLogs() {
   const [hosts, setHosts] = useState<any[]>([{ id: 'local', name: '本机(Linux)' }]);
@@ -36,12 +37,12 @@ export default function WebLogs() {
       </Card>
       {data?.error && <Alert type="error" message={data.error} />}
       {data && !data.error && (<>
-        <Row gutter={12} style={{ marginBottom: 12 }}>
-          <Col span={4}><Card size="small"><Statistic title="总请求" value={data.total} /></Card></Col>
-          <Col span={4}><Card size="small"><Statistic title="成功(<400)" value={data.ok} valueStyle={{ color: '#52c41a' }} /></Card></Col>
-          <Col span={4}><Card size="small"><Statistic title="4xx" value={data.err4} valueStyle={{ color: '#faad14' }} /></Card></Col>
-          <Col span={4}><Card size="small"><Statistic title="5xx" value={data.err5} valueStyle={{ color: '#ff4d4f' }} /></Card></Col>
-          <Col span={8}><Card size="small"><Statistic title="日志文件" value={data.file} valueStyle={{ fontSize: 14 }} /></Card></Col>
+        <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
+          <Col xs={12} sm={8} md={4}><StatCard title="总请求" value={data.total} icon={<ApiOutlined />} color="#2f6bff" /></Col>
+          <Col xs={12} sm={8} md={4}><StatCard title="成功 (<400)" value={data.ok} icon={<CheckCircleOutlined />} color="#16a34a" /></Col>
+          <Col xs={12} sm={8} md={4}><StatCard title="4xx" value={data.err4} icon={<WarningOutlined />} color="#f59e0b" /></Col>
+          <Col xs={12} sm={8} md={4}><StatCard title="5xx" value={data.err5} icon={<CloseCircleOutlined />} color="#ef4444" /></Col>
+          <Col xs={24} sm={16} md={8}><StatCard title="日志文件" value={<span style={{ fontSize: 14 }}>{data.file}</span>} icon={<FileTextOutlined />} color="#7c3aed" /></Col>
         </Row>
         <Row gutter={12}>
           <Col xs={24} lg={12}>{table('Top 访问来源 IP', data.topIps)}</Col>

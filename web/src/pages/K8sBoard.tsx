@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Row, Col, Card, Statistic, Table, Tag, Button, Progress, Space, Empty, Spin, Alert, Select, Badge, Tooltip } from 'antd';
+import { Row, Col, Card, Table, Tag, Button, Progress, Space, Empty, Spin, Alert, Select, Badge, Tooltip } from 'antd';
 import { ReloadOutlined, ClusterOutlined, HddOutlined, CloudServerOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 
 const EV_LEVEL: any = { Warning: 'error', Normal: 'default' };
 
@@ -45,11 +46,11 @@ export default function ClusterBoard() {
         <Tag>版本: {ov.version?.gitVersion || '-'}</Tag>
       </Space>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={12} sm={6}><Card size="small"><Statistic title="节点" value={nodes.length} prefix={<CloudServerOutlined />} /></Card></Col>
-        <Col xs={12} sm={6}><Card size="small"><Statistic title="命名空间" value={ov.namespaces} /></Card></Col>
-        <Col xs={12} sm={6}><Card size="small"><Statistic title="Deployments" value={totalDeployments} prefix={<ThunderboltOutlined />} /></Card></Col>
-        <Col xs={12} sm={6}><Card size="small"><Statistic title="Pod" value={runningPods} suffix={`/ ${totalPods}`} valueStyle={{ color: runningPods === totalPods && totalPods > 0 ? '#52c41a' : undefined }} /></Card></Col>
+      <Row gutter={[12, 12]} style={{ marginBottom: 4 }}>
+        <Col xs={12} sm={6}><StatCard title="节点" value={nodes.length} icon={<CloudServerOutlined />} color="#2f6bff" /></Col>
+        <Col xs={12} sm={6}><StatCard title="命名空间" value={ov.namespaces} icon={<ClusterOutlined />} color="#7c3aed" /></Col>
+        <Col xs={12} sm={6}><StatCard title="Deployments" value={totalDeployments} icon={<ThunderboltOutlined />} color="#0891b2" /></Col>
+        <Col xs={12} sm={6}><StatCard title="Pod" value={runningPods} suffix={`/ ${totalPods}`} icon={<HddOutlined />} color={runningPods === totalPods && totalPods > 0 ? '#16a34a' : '#f59e0b'} /></Col>
       </Row>
 
       {/* 节点资源用量 */}

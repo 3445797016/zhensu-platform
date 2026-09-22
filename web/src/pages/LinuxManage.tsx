@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Select, Button, Space, Card, Tabs, Table, Tag, Statistic, Row, Col, Progress, Input, App, Popconfirm, Drawer, Alert, Descriptions, Typography } from 'antd';
-import { ReloadOutlined, DownloadOutlined, DeleteOutlined, SyncOutlined, ArrowUpOutlined, SearchOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { Select, Button, Space, Card, Tabs, Table, Tag, Row, Col, Progress, Input, App, Popconfirm, Drawer, Alert, Descriptions, Typography } from 'antd';
+import { ReloadOutlined, DownloadOutlined, DeleteOutlined, SyncOutlined, ArrowUpOutlined, SearchOutlined, InfoCircleOutlined, CloudServerOutlined, ThunderboltOutlined, DatabaseOutlined, HddOutlined } from '@ant-design/icons';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 import { Services, Processes, Cron, Ports } from '../components/HostOps';
 
 export default function LinuxManage() {
@@ -36,10 +37,10 @@ export default function LinuxManage() {
       </Space>
 
       <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
-        <Col xs={12} sm={6}><Card size="small"><Statistic title="主机名" value={info?.hostname || '-'} /></Card></Col>
-        <Col xs={12} sm={6}><Card size="small"><Statistic title="CPU/核心" value={info ? `${info.cpuModel?.trim().slice(0, 26) || ''} ×${info.cores}` : '-'} valueStyle={{ fontSize: 14 }} /></Card></Col>
-        <Col xs={12} sm={6}><Card size="small"><Statistic title="内存" value={info ? `${info.memUsedMb}/${info.memTotalMb} MB` : '-'} valueStyle={{ fontSize: 16, color: memPct > 90 ? '#ff4d4f' : undefined }} suffix={<Tag color={memPct > 90 ? 'red' : 'green'}>{memPct}%</Tag>} /></Card></Col>
-        <Col xs={12} sm={6}><Card size="small"><Statistic title="磁盘(最大占用)" value={diskMax + '%'} valueStyle={{ color: diskMax > 80 ? '#ff4d4f' : undefined }} /></Card></Col>
+        <Col xs={12} sm={6}><StatCard title="主机名" value={<span style={{ fontSize: 16 }}>{info?.hostname || '-'}</span>} icon={<CloudServerOutlined />} color="#2f6bff" /></Col>
+        <Col xs={12} sm={6}><StatCard title="CPU / 核心" value={<span style={{ fontSize: 14 }}>{info ? `${info.cpuModel?.trim().slice(0, 22) || ''} ×${info.cores}` : '-'}</span>} icon={<ThunderboltOutlined />} color="#7c3aed" /></Col>
+        <Col xs={12} sm={6}><StatCard title="内存" value={info ? `${info.memUsedMb}/${info.memTotalMb}` : '-'} suffix="MB" icon={<DatabaseOutlined />} color={memPct > 90 ? '#ef4444' : '#16a34a'} progress={memPct} /></Col>
+        <Col xs={12} sm={6}><StatCard title="磁盘最大占用" value={diskMax} suffix="%" icon={<HddOutlined />} color={diskMax > 80 ? '#ef4444' : '#0891b2'} progress={diskMax} /></Col>
       </Row>
 
       {info && <Alert style={{ marginBottom: 12 }} type="info" showIcon message={`系统: ${info.os} | 内核 ${info.kernel} (${info.arch}) | 负载 ${info.load} | 运行 ${(info.uptimeSec / 3600).toFixed(1)}h`} />}

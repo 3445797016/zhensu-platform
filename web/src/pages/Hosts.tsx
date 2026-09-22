@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Space, Tag, Modal, Form, Input, Select, Switch, App, Row, Col, Card, Statistic, Drawer, Descriptions, Progress, Popconfirm, Segmented } from 'antd';
-import { PlusOutlined, CodeOutlined, ApiOutlined, ReloadOutlined, DashboardOutlined, DeleteOutlined, ToolOutlined } from '@ant-design/icons';
+import { Table, Button, Space, Tag, Modal, Form, Input, Select, Switch, App, Row, Col, Card, Drawer, Descriptions, Progress, Popconfirm, Segmented } from 'antd';
+import { PlusOutlined, CodeOutlined, ApiOutlined, ReloadOutlined, DashboardOutlined, DeleteOutlined, ToolOutlined, CloudServerOutlined, ClusterOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 import TerminalModal from '../components/Terminal';
 import HostOps from '../components/HostOps';
 
@@ -19,19 +20,38 @@ export default function Hosts() {
   const [cmdHost, setCmdHost] = useState<any>(null);
   const [execing, setExecing] = useState(false);
 
-  const load = async () => setHosts(await api.get('/hosts'));
+  const load = async () => { try { setHosts(await api.get('/hosts')); } catch (e: any) { message.error('加载主机列表失败: ' + e.message); } };
   useEffect(() => { load(); }, []);
 
   const save = async (v: any) => {
-    const isLocal = v.kind === 'local';
-    const body = { ...v, kind: v.kind || 'local', host: isLocal ? undefined : v.host, user: isLocal ? undefined : v.user, password: isLocal ? undefined : v.password, privateKey: isLocal ? undefined : v.privateKey };
-    if (edit) await api.put('/hosts/' + edit.id, body); else await api.post('/hosts', body);
-    message.success('已保存'); setOpen(false); form.resetFields(); load();
+    try {
+      const isLocal = v.kind === 'local';
+      const body = { ...v, kind: v.kind || 'local', host: isLocal ? undefined : v.host, user: isLocal ? undefined : v.user, password: isLocal ? undefined : v.password, privateKey: isLocal ? undefined : v.privateKey };
+      if (edit) await api.put('/hosts/' + edit.id, body); else await api.post('/hosts', body);
+      message.success('已保存'); setOpen(false); form.resetFields(); load();
+    } catch (e: any) { message.error('保存失败: ' + e.message); }
   };
 
-  const showMetrics = async (h: any) => { setMetrics({ loading: true, h }); const m = await api.get('/hosts/' + h.id + '/metrics'); setMetrics({ ...m, h }); };
-  const testConn = async (h: any) => { message.loading('测试中...'); const r = await api.post(`/hosts/${h.id}/test`); r.ok ? message.success(`连接成功: ${r.os}`) : message.error(r.error || '连接失败'); load(); };
-  const runCmd = async () => { setExecing(true); const r = await api.post(`/hosts/${cmdHost.id}/exec`, { command: cmd }); setCmdOut(`$ ${cmd}\n[退出码 ${r.code}]\n${r.stdout}${r.stderr && '\n[stderr]\n' + r.stderr}`); setExecing(false); };
+  const showMetrics = async (h: any) => {
+    setMetrics({ loading: true, h });
+    try { const m = await api.get('/hosts/' + h.id + '/metrics'); setMetrics({ ...m, h }); } catch (e: any) { setMetrics({ h, error: e.message }); }
+  };
+  const testConn = async (h: any) => {
+    message.loading('测试中...');
+    try {
+      const r = await api.post(`/hosts/${h.id}/test`);
+      r.ok ? message.success(`连接成功: ${r.os}`) : message.error(r.error || '连接失败');
+    } catch (e: any) { message.error('测试连接失败: ' + e.message); }
+    load();
+  };
+  const runCmd = async () => {
+    setExecing(true);
+    try {
+      const r = await api.post(`/hosts/${cmdHost.id}/exec`, { command: cmd });
+      setCmdOut(`$ ${cmd}\n[退出码 ${r.code}]\n${r.stdout}${r.stderr && '\n[stderr]\n' + r.stderr}`);
+    } catch (e: any) { setCmdOut(`错误: ${e.message}`); }
+    setExecing(false);
+  };
 
   const cols = [
     { title: '名称', dataIndex: 'name', render: (_: any, h: any) => <b>{h.name}</b> },
@@ -48,7 +68,7 @@ export default function Hosts() {
         <Button size="small" icon={<ApiOutlined />} onClick={() => setCmdHost(h)}>执行</Button>
         <Button size="small" icon={<ReloadOutlined />} onClick={() => testConn(h)}>测连</Button>
         <Button size="small" onClick={() => { setEdit(h); form.setFieldsValue(h); setOpen(true); }}>编辑</Button>
-        <Popconfirm title="删除该主机?" onConfirm={async () => { await api.del('/hosts/' + h.id); message.success('已删除'); load(); }}>
+        <Popconfirm title="删除该主机?" onConfirm={async () => { try { await api.del('/hosts/' + h.id); message.success('已删除'); } catch (e: any) { message.error('删除失败: ' + e.message); } load(); }}>
           <Button size="small" danger icon={<DeleteOutlined />} />
         </Popconfirm>
       </Space>
@@ -60,6 +80,13 @@ export default function Hosts() {
       <Space style={{ marginBottom: 12 }} wrap>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEdit(null); form.resetFields(); form.setFieldsValue({ kind: 'local', port: 22, authType: 'password' }); setOpen(true); }}>添加宿主机 / VM</Button>
       </Space>
+      <Row gutter={[12, 12]} style={{ marginBottom: 14 }}>
+        <Col xs={12} md={6}><StatCard title="纳管主机" value={hosts.length} icon={<CloudServerOutlined />} color="#2f6bff" /></Col>
+        <Col xs={12} md={6}><StatCard title="本机" value={hosts.filter((h) => h.kind === 'local').length} icon={<ClusterOutlined />} color="#f59e0b" />
+        </Col>
+        <Col xs={12} md={6}><StatCard title="SSH 远程" value={hosts.filter((h) => h.kind !== 'local').length} icon={<ApiOutlined />} color="#7c3aed" /></Col>
+        <Col xs={12} md={6}><StatCard title="已探活" value={hosts.filter((h) => h.lastSeen).length} icon={<CheckCircleOutlined />} color="#16a34a" /></Col>
+      </Row>
       <Table rowKey="id" dataSource={hosts} columns={cols} size="middle" pagination={{ pageSize: 10 }} />
 
       <Modal title={edit ? '编辑主机' : '添加主机 / VM'} open={open} onCancel={() => setOpen(false)} onOk={() => form.submit()} width={640} destroyOnClose>
@@ -114,9 +141,9 @@ function HostMetrics({ m }: any) {
   return (
     <div>
       <Row gutter={[16, 16]}>
-        <Col span={8}><Card size="small"><Statistic title="CPU 核数" value={m.cores} /></Card></Col>
-        <Col span={8}><Card size="small"><Statistic title="Load(1/5/15)" value={m.load1} /></Card></Col>
-        <Col span={8}><Card size="small"><Statistic title="运行时长" value={m.up || '-'} /></Card></Col>
+        <Col span={8}><StatCard title="CPU 核数" value={m.cores} color="#2f6bff" /></Col>
+        <Col span={8}><StatCard title="Load(1/5/15)" value={m.load1} color="#7c3aed" /></Col>
+        <Col span={8}><StatCard title="运行时长" value={m.up || '-'} color="#16a34a" /></Col>
       </Row>
       <Card size="small" title="内存" style={{ marginTop: 16 }}><Progress percent={m.memTotalMb ? Math.round((m.memUsedMb / m.memTotalMb) * 100) : 0} status={m.memTotalMb && m.memUsedMb / m.memTotalMb > 0.85 ? 'exception' : 'normal'} format={() => `${m.memUsedMb} / ${m.memTotalMb} MB`} /></Card>
       <Card size="small" title="磁盘" style={{ marginTop: 12 }}>{(m.disk || []).map((x: any, i: number) => <div key={i}><Progress percent={parseInt(x.usePct) || 0} format={() => `${x.mount} ${x.used} / ${x.size}`} /></div>)}</Card>

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Card, Table, Button, Space, Input, Tag, Select, Breadcrumb, Modal, message, Drawer, Alert, Popconfirm, Tooltip, Upload } from 'antd';
-import { FolderOutlined, FileTextOutlined, FileOutlined, ReloadOutlined, UploadOutlined, PlusOutlined, DeleteOutlined, DownloadOutlined, EditOutlined, HomeOutlined } from '@ant-design/icons';
+import { Card, Table, Button, Space, Input, Tag, Select, Breadcrumb, Modal, message, Drawer, Alert, Popconfirm, Tooltip, Upload, Row, Col } from 'antd';
+import { FolderOutlined, FileTextOutlined, FileOutlined, ReloadOutlined, UploadOutlined, PlusOutlined, DeleteOutlined, DownloadOutlined, EditOutlined, HomeOutlined, HddOutlined, DatabaseOutlined, AppstoreOutlined } from '@ant-design/icons';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 
 export default function FilesPage() {
   const [hosts, setHosts] = useState<any[]>([]);
@@ -90,6 +91,12 @@ export default function FilesPage() {
           <Button size="small" icon={<UploadOutlined />}>上传文件</Button>
         </Upload>
       </Space>
+      <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
+        <Col xs={12} md={6}><StatCard title="当前目录项" value={entries.length} icon={<AppstoreOutlined />} color="#2f6bff" /></Col>
+        <Col xs={12} md={6}><StatCard title="子目录" value={entries.filter((e) => e.type === 'd').length} icon={<FolderOutlined />} color="#f59e0b" /></Col>
+        <Col xs={12} md={6}><StatCard title="文件" value={entries.filter((e) => e.type === 'f').length} icon={<FileTextOutlined />} color="#7c3aed" /></Col>
+        <Col xs={12} md={6}><StatCard title="文件总大小" value={fmtSize(entries.filter((e) => e.type === 'f').reduce((a, e) => a + (e.size || 0), 0))} icon={<HddOutlined />} color="#0891b2" /></Col>
+      </Row>
       <Table rowKey="name" size="small" loading={loading} dataSource={entries} columns={cols as any} pagination={false} scroll={{ y: 'calc(100vh - 320px)' }} />
 
       <Modal title="新建 / 目录 / 重命名" open={!!modal} onCancel={() => setModal(null)} onOk={doModal} okText="确定" width={420}>

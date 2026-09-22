@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Card, Table, Tag, Button, Space, Tabs, Drawer, Descriptions, Input, App, Select, Segmented, Popconfirm, Alert, Badge, Tooltip } from 'antd';
-import { ReloadOutlined, PlayCircleOutlined, PauseCircleOutlined, CaretRightOutlined, StopOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
+import { Card, Table, Tag, Button, Space, Tabs, Drawer, Descriptions, Input, App, Select, Segmented, Popconfirm, Alert, Badge, Tooltip, Row, Col } from 'antd';
+import { ReloadOutlined, PlayCircleOutlined, PauseCircleOutlined, CaretRightOutlined, StopOutlined, DeleteOutlined, EyeOutlined, ContainerOutlined, AppstoreOutlined, HddOutlined } from '@ant-design/icons';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 
 export default function Docker() {
   const [hostId, setHostId] = useState<string>('');
@@ -43,11 +44,17 @@ export default function Docker() {
     <div>
       <Space style={{ marginBottom: 12 }} wrap>
         <Select value={hostId} onChange={setHostId} style={{ width: 220 }} options={hosts.map((h) => ({ value: h.id, label: h.name }))} />
-        <Button icon={<ReloadOutlined />} onClick={reload} loading={loading}>刷新</Button>
+        <Button icon={<ReloadOutlined />} onClick={() => reload()} loading={loading}>刷新</Button>
         {status && status.ok
           ? <Alert type="success" showIcon message={`Docker ${status.version?.Version} · 驱动 ${status.info?.Driver} · 容器 ${status.info?.ContainersRunning}/${status.info?.Containers}`} style={{ paddingInline: 12 }} />
           : <Alert type="error" showIcon message={status?.error || 'Docker 不可用'} />}
       </Space>
+      {status?.ok && <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
+        <Col xs={12} md={6}><StatCard title="容器总数" value={containers.length} icon={<ContainerOutlined />} color="#2f6bff" hint={`运行 ${containers.filter((c) => c.state === 'running').length} · 停止 ${containers.filter((c) => c.state !== 'running').length}`} /></Col>
+        <Col xs={12} md={6}><StatCard title="运行中" value={containers.filter((c) => c.state === 'running').length} icon={<PlayCircleOutlined />} color="#16a34a" /></Col>
+        <Col xs={12} md={6}><StatCard title="镜像" value={images.length} icon={<AppstoreOutlined />} color="#7c3aed" /></Col>
+        <Col xs={12} md={6}><StatCard title="Docker 版本" value={<span style={{ fontSize: 15 }}>{status.version?.Version || '-'}</span>} icon={<HddOutlined />} color="#0891b2" hint={`驱动 ${status.info?.Driver || '-'}`} /></Col>
+      </Row>}
       {status?.ok && <Tabs defaultActiveKey="c" items={[
         { key: 'c', label: `容器 ${containers.length}`, children: containerTable() },
         { key: 'i', label: `镜像 ${images.length}`, children: imageTable() },
