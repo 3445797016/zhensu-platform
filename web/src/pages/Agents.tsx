@@ -1,18 +1,27 @@
 import { useEffect, useState } from 'react';
 import { Card, Row, Col, Tag, Space, List, Descriptions, Progress, Empty, Spin, Tabs, Alert, Typography, Divider } from 'antd';
-import { RobotOutlined, CodeOutlined } from '@ant-design/icons';
+import { RobotOutlined, CodeOutlined, PlayCircleOutlined, CheckCircleOutlined, MessageOutlined } from '@ant-design/icons';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 
 export default function Agents() {
   const [d, setD] = useState<any>(null);
-  const load = async () => setD(await api.get('/agents/overview'));
+  const [err, setErr] = useState<string | null>(null);
+  const load = async () => { try { setD(await api.get('/agents/overview')); setErr(null); } catch (e: any) { setErr(e.message); } };
   useEffect(() => { load(); const t = setInterval(load, 30000); return () => clearInterval(t); }, []);
+  if (err) return <Alert type="error" message="Agent 加载失败" description={err} showIcon style={{ margin: 24 }} />;
   if (!d) return <center style={{ marginTop: 120 }}><Spin size="large" /></center>;
   const pi = d.agents?.find((a: any) => a.id === 'pi');
   const oc = d.agents?.find((a: any) => a.id === 'opencode');
   return (
     <div>
       <Alert style={{ marginBottom: 16 }} message="Agent 状态实时扫描" description={`发现引擎基于本机进程 + CLI 探测，缓存 20 秒。刷新按钮 / 每 30 秒自动刷新。`} type="info" showIcon />
+      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+        <Col xs={12} md={6}><StatCard title="Agent 引擎" value={d.agents?.length || 0} icon={<RobotOutlined />} color="#2f6bff" /></Col>
+        <Col xs={12} md={6}><StatCard title="运行中实例" value={(d.agents || []).reduce((a: number, x: any) => a + (x.running || 0), 0)} icon={<PlayCircleOutlined />} color="#16a34a" /></Col>
+        <Col xs={12} md={6}><StatCard title="已安装" value={(d.agents || []).filter((x: any) => x.installed).length} icon={<CheckCircleOutlined />} color="#0891b2" /></Col>
+        <Col xs={12} md={6}><StatCard title="会话总数" value={(d.agents || []).reduce((a: number, x: any) => a + (x.sessionCount || 0), 0)} icon={<MessageOutlined />} color="#7c3aed" /></Col>
+      </Row>
       <Row gutter={16}>
         <Col xs={24} lg={12}>
           <Card title={<Space><RobotOutlined style={{ color: '#4f8cff' }} /> Pi Coding Agent</Space>}

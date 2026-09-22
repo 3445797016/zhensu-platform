@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import {
   Card, Table, Tag, Space, Button, Select, Input, Modal, Form, message, Row, Col, Statistic, Tabs, Alert, Popconfirm, Descriptions, InputNumber, Divider, Empty,
 } from 'antd';
-import { DatabaseOutlined, PlusOutlined, ReloadOutlined, DeleteOutlined, ApiOutlined, ConsoleSqlOutlined, SearchOutlined, ScanOutlined, ThunderboltOutlined, ExperimentOutlined } from '@ant-design/icons';
+import { DatabaseOutlined, PlusOutlined, ReloadOutlined, DeleteOutlined, ApiOutlined, ConsoleSqlOutlined, SearchOutlined, ScanOutlined, ThunderboltOutlined, ExperimentOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 
 const KIND: any = { sql: '关系型', kv: '键值', doc: '文档', vector: '向量' };
 const KIND_C: any = { sql: 'green', kv: 'volcano', doc: 'geekblue', vector: 'purple' };
@@ -44,6 +45,12 @@ export default function DatabaseCenter() {
         <span style={{ fontSize: 12, color: '#888' }}>关系型 · NoSQL · 向量库(为 ML/DL 准备)</span></Space>}
         extra={<Space><Button icon={<SearchOutlined />} onClick={async () => { try { const r = await api.get('/db/scan-local'); setScan(r); } catch (e: any) { message.error(e.message); } }}>扫描本机数据库</Button><Button icon={<ReloadOutlined />} onClick={load}>刷新</Button><Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>添加连接</Button></Space>}>
         <Alert type="info" showIcon style={{ marginBottom: 8 }} message="用法:先在「中间件/工具库」一键部署 MySQL/PostgreSQL/Redis/Mongo/ClickHouse/Qdrant/Chroma 等容器 → 这里添加连接(容器名留空会自动按镜像识别)→ 进入后浏览库表、执行查询/命令;向量库可建集合、写入向量、相似检索(接入后续 ML/DL 与 RAG)。" />
+        <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
+          <Col xs={12} md={6}><StatCard title="连接总数" value={conns.length} icon={<DatabaseOutlined />} color="#2f6bff" /></Col>
+          <Col xs={12} md={6}><StatCard title="在线" value={conns.filter((c) => c.ok).length} icon={<CheckCircleOutlined />} color="#16a34a" /></Col>
+          <Col xs={12} md={6}><StatCard title="异常" value={conns.filter((c) => !c.ok).length} icon={<CloseCircleOutlined />} color="#f59e0b" /></Col>
+          <Col xs={12} md={6}><StatCard title="支持类型" value={types.length} icon={<ApiOutlined />} color="#7c3aed" /></Col>
+        </Row>
         <Table rowKey="id" size="small" dataSource={conns} columns={cols as any} pagination={false} />
       </Card>
       {scan && <ScanModal scan={scan} onClose={() => setScan(null)} onImported={() => { setScan(null); load(); }} />}

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Table, Input, Select, Space, Tag, Button, Card, Typography, Tooltip } from 'antd';
-import { BookOutlined, SearchOutlined, CodeOutlined, FieldTimeOutlined, DatabaseOutlined } from '@ant-design/icons';
+import { Table, Input, Select, Space, Tag, Button, Card, Typography, Tooltip, Row, Col } from 'antd';
+import { BookOutlined, SearchOutlined, CodeOutlined, FieldTimeOutlined, DatabaseOutlined, AppstoreOutlined, CheckCircleOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 
 const DIFF_COLOR: Record<string, string> = { 简单: 'green', 中等: 'orange', 困难: 'red' };
 
@@ -60,6 +61,12 @@ export default function ProblemsPage() {
 
   return (
     <div>
+      <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
+        <Col xs={12} md={6}><StatCard title="题目总数" value={total} icon={<BookOutlined />} color="#2f6bff" /></Col>
+        <Col xs={12} md={6}><StatCard title="算法分类" value={cats.length} icon={<AppstoreOutlined />} color="#7c3aed" /></Col>
+        <Col xs={12} md={6}><StatCard title="简单" value={list.filter((p) => p.difficulty === '简单').length} icon={<CheckCircleOutlined />} color="#16a34a" /></Col>
+        <Col xs={12} md={6}><StatCard title="中等 + 困难" value={list.filter((p) => p.difficulty !== '简单').length} icon={<ThunderboltOutlined />} color="#f59e0b" /></Col>
+      </Row>
       <Card size="small" title={
         <Space><BookOutlined style={{ color: '#1677ff' }} /><b>算法题库</b>
           <Tag color="blue">{total} 题</Tag><Tag>{cats.length} 类算法</Tag>

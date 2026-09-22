@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Card, Table, Button, Space, Tag, Input, App, Tooltip, Popconfirm, Badge, Typography, Alert } from 'antd';
-import { ReloadOutlined, SaveOutlined, ToolOutlined, CheckCircleFilled, ExclamationCircleFilled, SettingOutlined } from '@ant-design/icons';
+import { Card, Table, Button, Space, Tag, Input, App, Tooltip, Popconfirm, Badge, Typography, Alert, Row, Col } from 'antd';
+import { ReloadOutlined, SaveOutlined, ToolOutlined, CheckCircleFilled, ExclamationCircleFilled, SettingOutlined, CloseCircleOutlined, AppstoreOutlined } from '@ant-design/icons';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 
 const { Text } = Typography;
 
@@ -52,6 +53,12 @@ export default function BuildTools() {
         <Text type="secondary">本地编译器/构建器配置(等价 Jenkins Global Tool Configuration),构建步骤会自动注入已配置工具到 PATH 与 HOME 环境变量</Text>
       </Space>
       <Alert type="info" showIcon style={{ marginBottom: 12 }} message="未安装的工具可点击「安装指引」查看安装命令;手动指定路径后,构建时会自动注入如 JAVA_HOME、MAVEN_HOME、GOROOT 等环境变量。" />
+      <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
+        <Col xs={12} md={6}><StatCard title="工具总数" value={list.length} icon={<ToolOutlined />} color="#2f6bff" /></Col>
+        <Col xs={12} md={6}><StatCard title="已检测到" value={list.filter((t) => t.detected).length} icon={<CheckCircleFilled />} color="#16a34a" /></Col>
+        <Col xs={12} md={6}><StatCard title="未安装" value={list.filter((t) => !t.detected).length} icon={<CloseCircleOutlined />} color="#f59e0b" /></Col>
+        <Col xs={12} md={6}><StatCard title="类别" value={new Set(list.map((t) => t.kind)).size} icon={<AppstoreOutlined />} color="#7c3aed" /></Col>
+      </Row>
       <Table rowKey="id" dataSource={list} columns={cols} size="middle" loading={loading} pagination={false} />
 
       <Card size="small" title={editing ? `配置工具路径 · ${list.find((t) => t.id === editing.id)?.name || ''}` : ''} style={{ display: editing ? 'block' : 'none', marginTop: 12 }}>

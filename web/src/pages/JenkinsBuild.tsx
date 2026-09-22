@@ -9,6 +9,7 @@ import {
   ClockCircleFilled, PartitionOutlined, ApiOutlined, LinkOutlined, ThunderboltOutlined,
 } from '@ant-design/icons';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 
 const { Text, Paragraph } = Typography;
 
@@ -103,6 +104,12 @@ export default function JenkinsBuild() {
 
   return (
     <Space direction="vertical" style={{ width: '100%' }} size={12}>
+      <Row gutter={[12, 12]}>
+        <Col xs={12} md={6}><StatCard title="构建任务" value={jobs.length} icon={<PartitionOutlined />} color="#2f6bff" hint={`启用 ${jobs.filter((j) => j.enabled !== false).length}`} /></Col>
+        <Col xs={12} md={6}><StatCard title="构建中" value={jobs.filter((j) => j.running).length} icon={<LoadingOutlined spin={jobs.some((j) => j.running)} />} color="#0891b2" hint={`队列 ${queue.length}`} /></Col>
+        <Col xs={12} md={6}><StatCard title="最近构建成功率" value={(() => { const b = jobs.map((j) => j.lastBuild?.status).filter(Boolean); return b.length ? Math.round((b.filter((s) => s === 'success').length / b.length) * 100) : '—'; })()} suffix={jobs.some((j) => j.lastBuild?.status) ? '%' : ''} icon={<CheckCircleFilled />} color="#16a34a" /></Col>
+        <Col xs={12} md={6}><StatCard title="关联仓库" value={repos.length} icon={<RocketOutlined />} color="#7c3aed" /></Col>
+      </Row>
       {queue.length > 0 && <Card size="small" title={<Space><ClockCircleFilled style={{ color: '#faad14' }} />构建队列({queue.length})</Space>} style={{ borderColor: '#ffe58f' }}>
         <List size="small" dataSource={queue} renderItem={(q: any) => <List.Item><Space><Badge status="warning" /><b>{q.jobName}</b><Tag>第 {q.position} 位</Tag><Text type="secondary">触发:{q.trigger} · {new Date(q.queuedAt).toLocaleTimeString()}</Text></Space></List.Item>} />
       </Card>}

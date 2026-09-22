@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Card, Table, Tag, Space, Button, Input, Modal, message, Select, Popconfirm, Progress, Tooltip } from 'antd';
-import { DatabaseOutlined, PlusOutlined, ReloadOutlined, DeleteOutlined, DownloadOutlined, UndoOutlined } from '@ant-design/icons';
+import { Card, Table, Tag, Space, Button, Input, Modal, message, Select, Popconfirm, Progress, Tooltip, Row, Col } from 'antd';
+import { DatabaseOutlined, PlusOutlined, ReloadOutlined, DeleteOutlined, DownloadOutlined, UndoOutlined, CheckCircleOutlined, SyncOutlined, HddOutlined } from '@ant-design/icons';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 
 export default function BackupCenter() {
   const [list, setList] = useState<any[]>([]);
@@ -41,6 +42,12 @@ export default function BackupCenter() {
   return (
     <Card size="small" title={<Space><DatabaseOutlined style={{ color: '#52c41a' }} /><b>备份中心</b><Tag>归档目录 /var/backups/zhensu</Tag><Tag color="blue">走任务中心执行</Tag></Space>}
       extra={<Space><Button icon={<ReloadOutlined />} onClick={load}>刷新</Button><Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>新建备份</Button></Space>}>
+      <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
+        <Col xs={12} md={6}><StatCard title="备份总数" value={list.length} icon={<DatabaseOutlined />} color="#2f6bff" /></Col>
+        <Col xs={12} md={6}><StatCard title="已完成" value={list.filter((b) => b.status === 'ok').length} icon={<CheckCircleOutlined />} color="#16a34a" /></Col>
+        <Col xs={12} md={6}><StatCard title="进行中" value={list.filter((b) => b.status === 'running').length} icon={<SyncOutlined spin={list.some((b) => b.status === 'running')} />} color="#0891b2" /></Col>
+        <Col xs={12} md={6}><StatCard title="总大小" value={(list.reduce((a, b) => a + (b.size || 0), 0) / 1048576).toFixed(1)} suffix="MB" icon={<HddOutlined />} color="#7c3aed" /></Col>
+      </Row>
       <Table rowKey="id" size="small" dataSource={list} columns={cols as any} pagination={false} />
       {list.some((b) => b.status === 'running') && <Progress percent={100} status="active" showInfo={false} style={{ marginTop: 8 }} />}
       <Modal title="新建备份" open={open} onCancel={() => setOpen(false)} onOk={create} okText="开始备份" width={520}>

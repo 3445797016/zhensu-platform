@@ -1,16 +1,41 @@
 import { useEffect, useState } from 'react';
-import { Tabs, Card, Table, Tag, Space, Input, Button, Switch, Alert, message, Typography, Divider, Select, Popconfirm, Popover, Modal } from 'antd';
+import { Tabs, Card, Table, Tag, Space, Input, Button, Switch, Alert, message, Typography, Divider, Select, Popconfirm, Popover, Modal, Row, Col } from 'antd';
 import { SafetyOutlined, KeyOutlined, AuditOutlined, ReloadOutlined, LogoutOutlined, BellOutlined, PlusOutlined, SendOutlined, DeleteOutlined, SaveOutlined } from '@ant-design/icons';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 
 export default function SystemCenter() {
   return (
-    <Tabs defaultActiveKey="audit" items={[
-      { key: 'audit', label: '📋 操作审计', children: <AuditTab /> },
-      { key: 'api', label: '🔑 开放 API', children: <ApiTab /> },
-      { key: 'sec', label: '🛡 登录安全', children: <SecTab /> },
-      { key: 'notify', label: '🔔 通知', children: <NotifyTab /> },
-    ]} />
+    <div>
+      <SystemStats />
+      <Tabs defaultActiveKey="audit" items={[
+        { key: 'audit', label: '📋 操作审计', children: <AuditTab /> },
+        { key: 'api', label: '🔑 开放 API', children: <ApiTab /> },
+        { key: 'sec', label: '🛡 登录安全', children: <SecTab /> },
+        { key: 'notify', label: '🔔 通知', children: <NotifyTab /> },
+      ]} />
+    </div>
+  );
+}
+
+function SystemStats() {
+  const [s, setS] = useState({ audit: 0, api: false, auth: false, notify: 0 });
+  useEffect(() => {
+    (async () => {
+      const audit = await api.get('/audit').then((r) => r.stat?.total ?? (r.list?.length || 0)).catch(() => 0);
+      const apiOn = await api.get('/apikey').then((r) => !!r.enabled).catch(() => false);
+      const auth = await api.get('/auth/status').then((r) => !!r.enabled).catch(() => false);
+      const notify = await api.get('/notify/config').then((r) => (r.channels || []).filter((c: any) => c.enabled).length).catch(() => 0);
+      setS({ audit, api: apiOn, auth, notify });
+    })();
+  }, []);
+  return (
+    <Row gutter={[12, 12]} style={{ marginBottom: 14 }}>
+      <Col xs={12} md={6}><StatCard title="审计条数" value={s.audit} icon={<AuditOutlined />} color="#2f6bff" /></Col>
+      <Col xs={12} md={6}><StatCard title="开放 API" value={s.api ? '已启用' : '未启用'} icon={<KeyOutlined />} color={s.api ? '#16a34a' : '#94a3b8'} /></Col>
+      <Col xs={12} md={6}><StatCard title="登录保护" value={s.auth ? '已启用' : '开放模式'} icon={<SafetyOutlined />} color={s.auth ? '#16a34a' : '#f59e0b'} /></Col>
+      <Col xs={12} md={6}><StatCard title="启用通知渠道" value={s.notify} icon={<BellOutlined />} color="#7c3aed" /></Col>
+    </Row>
   );
 }
 
@@ -146,6 +171,7 @@ function SecTab() {
 }
 
 const TYPE_INFO: any = {
+  telegram: { label: 'Telegram', hint: 'Bot Token + Chat ID。可自建 API 代理(反代 api.telegram.org)' },
   dingtalk: { label: '钉钉', hint: '群机器人 Webhook: https://oapi.dingtalk.com/robot/send?access_token=xxx（安全设置若加签/关键字需一致）' },
   feishu: { label: '飞书', hint: '群机器人 Webhook: https://open.feishu.cn/open-apis/bot/v2/hook/xxx' },
   serverchan: { label: 'Server酱', hint: '完整推送地址: https://sctapi.ftqq.com/<SENDKEY>.send' },
@@ -169,7 +195,7 @@ function NotifyTab() {
   };
   const add = async () => { const r = await api.post('/notify/channel', { type: addType }); setChs([...chs, r.channel]); };
   return (
-    <Card size="small" title={<Space><BellOutlined /><b>告警通知渠道</b><Tag color="orange">钉钉/飞书/Server酱/Webhook</Tag></Space>}
+    <Card size="small" title={<Space><BellOutlined /><b>告警通知渠道</b><Tag color="orange">Telegram/钉钉/飞书/Server酱/Webhook/邮件</Tag></Space>}
       extra={<Space><Button icon={<ReloadOutlined />} onClick={load} /><Button onClick={async () => { const r = await api.post('/notify/resend'); message.info(r.msg); }}>重放最近告警</Button><Button type="primary" icon={<SaveOutlined />} onClick={save}>保存全部</Button></Space>}>
       <Space direction="vertical" style={{ width: '100%' }} size={10}>
         <Alert type="info" showIcon message="监控阈值告警、Ansible 定时任务失败等会自动通过启用的渠道推送(右上角铃铛之外的额外通知)。" />
@@ -178,7 +204,7 @@ function NotifyTab() {
           <Select style={{ width: 180 }} value={addType} onChange={setAddType} options={Object.keys(TYPE_INFO).map((k) => ({ value: k, label: TYPE_INFO[k].label }))} />
           <Button icon={<PlusOutlined />} onClick={add}>添加</Button>
         </Space>
-        {chs.length === 0 && <Alert type="warning" showIcon message="还没有通知渠道。添加一个钉钉/飞书群机器人或 Server酱,点「保存」后即可收告警。" />}
+        {chs.length === 0 && <Alert type="warning" showIcon message="还没有通知渠道。从下拉菜单选择类型(钉钉/飞书/Server酱/Webhook/邮件),点「添加」后填写配置即可。" />}
         {chs.map((c) => (
           <Card key={c.id} size="small" style={{ background: '#fafafa' }}>
             <Space direction="vertical" style={{ width: '100%' }} size={6}>
@@ -189,7 +215,20 @@ function NotifyTab() {
                 <Button size="small" icon={<SendOutlined />} onClick={() => test(c)}>发送测试</Button>
                 <Popconfirm title="删除该渠道?" onConfirm={() => setChs(chs.filter((x) => x.id !== c.id))}><Button size="small" danger icon={<DeleteOutlined />} /></Popconfirm>
               </Space>
-              {c.type === 'email' ? (
+              {c.type === 'telegram' ? (
+                <Space direction="vertical" style={{ width: '100%' }} size={6}>
+                  <Space wrap>
+                    <span style={{ width: 72 }}>Bot Token</span>
+                    <Input.Password size="small" style={{ width: 300 }} value={c.password} onChange={(e) => patch(c.id, { password: e.target.value })} placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" />
+                  </Space>
+                  <Space wrap>
+                    <span style={{ width: 72 }}>Chat ID</span>
+                    <Input size="small" style={{ width: 200 }} value={c.user} onChange={(e) => patch(c.id, { user: e.target.value })} placeholder="123456789" />
+                    <span style={{ width: 60 }}>API 代理</span>
+                    <Input size="small" style={{ width: 250 }} value={c.url} onChange={(e) => patch(c.id, { url: e.target.value })} placeholder="留空=默认 api.telegram.org" />
+                  </Space>
+                </Space>
+              ) : (c.type === 'email' ? (
                 <Space direction="vertical" style={{ width: '100%' }} size={6}>
                   <Space wrap><span style={{ width: 60 }}>服务器</span><Input size="small" style={{ width: 220 }} value={c.host} onChange={(e) => patch(c.id, { host: e.target.value })} placeholder="smtp.qq.com" />
                     <span>端口</span><Input size="small" style={{ width: 80 }} value={c.port} onChange={(e) => patch(c.id, { port: Number(e.target.value) || 587 })} />
@@ -205,7 +244,7 @@ function NotifyTab() {
                 <Input size="small" style={{ width: 'calc(100% - 120px)' }} value={c.url} onChange={(e) => patch(c.id, { url: e.target.value })} placeholder="https://…" />
                 {c.type === 'dingtalk' && <span style={{ width: 60 }}>关键字</span>}
                 {c.type === 'dingtalk' && <Input size="small" style={{ width: 200 }} value={c.keyword} onChange={(e) => patch(c.id, { keyword: e.target.value })} placeholder="(如机器人安全设置需要)" />}
-              </Space>)}
+              </Space>))}
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>{TYPE_INFO[c.type]?.hint}</Typography.Text>
             </Space>
           </Card>

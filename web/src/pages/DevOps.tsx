@@ -1,21 +1,44 @@
 import { useEffect, useState } from 'react';
-import { Card, Tabs, Table, Button, Space, Modal, Form, Input, Select, Tag, App, Popconfirm, Drawer, Alert, Timeline, InputNumber, Typography } from 'antd';
-import { PlusOutlined, PlayCircleOutlined, DeleteOutlined, CodeOutlined } from '@ant-design/icons';
+import { Card, Tabs, Table, Button, Space, Modal, Form, Input, Select, Tag, App, Popconfirm, Drawer, Alert, Timeline, InputNumber, Typography, Row, Col } from 'antd';
+import { PlusOutlined, PlayCircleOutlined, DeleteOutlined, CodeOutlined, RocketOutlined, HistoryOutlined, DeploymentUnitOutlined } from '@ant-design/icons';
 import MonacoEditor from '@monaco-editor/react';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 import DevOpsToolchain from './DevOpsCI';
 import AnsiblePage from './Ansible';
 
 export default function DevOps() {
   return (
-    <Tabs defaultActiveKey="pipeline" items={[
-      { key: 'pipeline', label: '流水线', children: <Pipelines /> },
-      { key: 'releases', label: '发布记录', children: <Releases /> },
-      { key: 'scripts', label: '脚本库', children: <Scripts /> },
-      { key: 'env', label: '环境管理', children: <Envs /> },
-      { key: 'cicd', label: 'CI/CD 工具链', children: <DevOpsToolchain /> },
-      { key: 'ansible', label: 'Ansible 自动化', children: <AnsiblePage /> },
-    ]} />
+    <div>
+      <DevOpsStats />
+      <Tabs defaultActiveKey="pipeline" items={[
+        { key: 'pipeline', label: '流水线', children: <Pipelines /> },
+        { key: 'releases', label: '发布记录', children: <Releases /> },
+        { key: 'scripts', label: '脚本库', children: <Scripts /> },
+        { key: 'env', label: '环境管理', children: <Envs /> },
+        { key: 'cicd', label: 'CI/CD 工具链', children: <DevOpsToolchain /> },
+        { key: 'ansible', label: 'Ansible 自动化', children: <AnsiblePage /> },
+      ]} />
+    </div>
+  );
+}
+
+function DevOpsStats() {
+  const [c, setC] = useState({ pipelines: 0, releases: 0, scripts: 0, envs: 0 });
+  useEffect(() => {
+    (async () => {
+      const safe = async (u: string) => { try { const r = await api.get(u); return Array.isArray(r) ? r.length : (r?.total || 0); } catch { return 0; } };
+      const [pipelines, releases, scripts, envs] = await Promise.all([safe('/devops/pipelines'), safe('/devops/releases'), safe('/devops/scripts'), safe('/devops/envs')]);
+      setC({ pipelines, releases, scripts, envs });
+    })();
+  }, []);
+  return (
+    <Row gutter={[12, 12]} style={{ marginBottom: 14 }}>
+      <Col xs={12} md={6}><StatCard title="流水线" value={c.pipelines} icon={<RocketOutlined />} color="#2f6bff" /></Col>
+      <Col xs={12} md={6}><StatCard title="发布记录" value={c.releases} icon={<HistoryOutlined />} color="#7c3aed" /></Col>
+      <Col xs={12} md={6}><StatCard title="脚本库" value={c.scripts} icon={<CodeOutlined />} color="#0891b2" /></Col>
+      <Col xs={12} md={6}><StatCard title="环境" value={c.envs} icon={<DeploymentUnitOutlined />} color="#16a34a" /></Col>
+    </Row>
   );
 }
 

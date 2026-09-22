@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Card, Space, Button, Tag, Table, Drawer, App, Input, TimePicker, Switch, Popconfirm, Typography, Alert, Divider } from 'antd';
-import { FileTextOutlined, PlusOutlined, DeleteOutlined, SendOutlined, DownloadOutlined, ReloadOutlined, ScheduleOutlined, CopyOutlined } from '@ant-design/icons';
+import { Card, Space, Button, Tag, Table, Drawer, App, Input, TimePicker, Switch, Popconfirm, Typography, Alert, Divider, Row, Col } from 'antd';
+import { FileTextOutlined, PlusOutlined, DeleteOutlined, SendOutlined, DownloadOutlined, ReloadOutlined, ScheduleOutlined, CopyOutlined, ClockCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { api } from '../api';
+import { StatCard } from '../components/ui';
 import Markdown from '../components/Markdown';
 
 const { Text } = Typography;
@@ -48,6 +49,12 @@ export default function ReportPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <Row gutter={[12, 12]}>
+        <Col xs={12} md={6}><StatCard title="报告总数" value={list.length} icon={<FileTextOutlined />} color="#2f6bff" /></Col>
+        <Col xs={12} md={6}><StatCard title="已推送" value={list.filter((r) => r.pushed).length} icon={<SendOutlined />} color="#16a34a" /></Col>
+        <Col xs={12} md={6}><StatCard title="定时任务" value={scheds.length} icon={<ScheduleOutlined />} color="#7c3aed" /></Col>
+        <Col xs={12} md={6}><StatCard title="启用中的定时" value={scheds.filter((s) => s.enabled).length} icon={<ClockCircleOutlined />} color="#0891b2" /></Col>
+      </Row>
       <Card size="small" title={<Space><FileTextOutlined /><b>巡检报告</b><Tag color="green">监控/告警/Ansible/任务 一键汇总</Tag></Space>}
         extra={<Space>
           <Switch checked={pushOnGen} onChange={setPushOnGen} checkedChildren="推送" unCheckedChildren="仅生成" />
