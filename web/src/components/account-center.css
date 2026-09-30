@@ -1,0 +1,56 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   顶部消息 / 告警弹层 · 样式
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.bell-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 9px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .15s ease;
+  position: relative;
+}
+.bell-item:hover { background: #f5f7fa; }
+.bell-item.is-ack { opacity: .62; }
+.bell-item:not(.is-ack)::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 14px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #f5222d;
+}
+.bell-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex: 0 0 auto;
+}
+.bell-scroll::-webkit-scrollbar { width: 8px; }
+.bell-scroll::-webkit-scrollbar-thumb { background: #d9dde5; border-radius: 5px; }
+.bell-scroll::-webkit-scrollbar-track { background: transparent; }
+.bell-pulse {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f5222d;
+  position: relative;
+}
+.bell-pulse::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: inherit;
+  animation: bellPulse 1.5s ease-out infinite;
+}
+@keyframes bellPulse { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(3.2); opacity: 0; } }
