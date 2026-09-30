@@ -1,0 +1,195 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   PentAGI 集成 · 页面样式（可迁移，随目录整体拷贝）
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Hero 顶部横幅 ─────────────────────────────────────────────────────── */
+.pg-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  padding: 20px 24px;
+  color: #fff;
+  background: linear-gradient(118deg, #101a3d 0%, #2447b8 52%, #6d28d9 100%);
+  box-shadow: 0 10px 30px -12px rgba(36, 71, 184, 0.55);
+}
+.pg-hero::after {
+  content: '';
+  position: absolute;
+  right: -80px;
+  top: -120px;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.22), transparent 65%);
+  pointer-events: none;
+}
+.pg-hero::before {
+  content: '';
+  position: absolute;
+  left: -60px;
+  bottom: -140px;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.35), transparent 65%);
+  pointer-events: none;
+}
+.pg-hero-inner { position: relative; z-index: 1; }
+.pg-hero-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(4px);
+}
+.pg-hero .ant-typography { color: #fff; }
+.pg-hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+.pg-hero .pg-hero-btn.ant-btn {
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+.pg-hero .pg-hero-btn.ant-btn:hover {
+  border-color: #fff !important;
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.22) !important;
+}
+.pg-hero .pg-hero-btn-primary.ant-btn {
+  border-color: #fff;
+  color: #1b2a5b;
+  background: #fff;
+  font-weight: 600;
+}
+.pg-hero .pg-hero-btn-primary.ant-btn:hover {
+  color: #1b2a5b !important;
+  background: #eef2ff !important;
+}
+
+/* ── 统计卡 ───────────────────────────────────────────────────────────── */
+.pg-stat {
+  border-radius: 12px;
+  border: 1px solid #eef0f4;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.pg-stat:hover { transform: translateY(-2px); box-shadow: 0 8px 20px -12px rgba(15, 23, 42, .35); }
+.pg-stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+}
+
+/* ── 状态圆点（运行中脉冲）───────────────────────────────────────────── */
+.pg-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+  background: #8c8c8c;
+}
+.pg-dot.running { background: #1677ff; }
+.pg-dot.finished { background: #52c41a; }
+.pg-dot.failed { background: #ff4d4f; }
+.pg-dot.waiting { background: #faad14; }
+.pg-dot.created { background: #bfbfbf; }
+.pg-dot.stopped { background: #8c8c8c; }
+.pg-dot.running::after,
+.pg-dot.waiting::after {
+  content: '';
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: inherit;
+  animation: pg-pulse 1.4s ease-out infinite;
+}
+@keyframes pg-pulse {
+  0% { transform: scale(1); opacity: .8; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+/* ── 任务行 ───────────────────────────────────────────────────────────── */
+.pg-flow-row { cursor: pointer; }
+.pg-flow-row td { transition: background .15s ease; }
+
+/* ── 终端控制台 ───────────────────────────────────────────────────────── */
+.pg-console {
+  background: #0b1021;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #1c2445;
+}
+.pg-console-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #141a33;
+  border-bottom: 1px solid #1c2445;
+}
+.pg-console-bar .pg-dot-mac {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.pg-console-body {
+  padding: 12px 14px;
+  max-height: 56vh;
+  overflow: auto;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #cdd6f4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.pg-console-body::-webkit-scrollbar { width: 10px; height: 10px; }
+.pg-console-body::-webkit-scrollbar-thumb { background: #2b365e; border-radius: 6px; }
+.pg-console-body::-webkit-scrollbar-track { background: transparent; }
+.pg-console-stdin { color: #7ee787; }
+.pg-console-stderr { color: #ffb4ab; }
+
+/* ── 风险发现卡 ───────────────────────────────────────────────────────── */
+.pg-finding {
+  border-radius: 10px;
+  border: 1px solid #ffd8d8;
+  background: linear-gradient(180deg, #fff5f5 0%, #fff 100%);
+}
+.pg-finding.high { border-color: #ffe0b3; background: linear-gradient(180deg, #fff9f0 0%, #fff 100%); }
+.pg-finding.medium { border-color: #d6e4ff; background: linear-gradient(180deg, #f3f7ff 0%, #fff 100%); }
+
+/* ── 时间线 ───────────────────────────────────────────────────────────── */
+.pg-timeline-msg {
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #fafbfc;
+  border: 1px solid #eef0f4;
+}
+.pg-mono { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; }
+
+/* 新日志淡入 */
+.pg-fade-in { animation: pg-fade .25s ease; }
+@keyframes pg-fade { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+/* 抽屉主体背景 */
+.pg-drawer-body { background: #f5f6f8; min-height: 100%; }
