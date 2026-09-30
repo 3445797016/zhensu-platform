@@ -35,9 +35,16 @@ import { register as targets } from './routes/targets.js';
 import { register as seclab } from './routes/seclab.js';
 import { register as tasksApi } from './modules/tasks.js';
 import { register as ansible } from './routes/ansible.js';
+import { register as minio } from './routes/minio.js';
+import { register as net } from './routes/net.js';
+import { register as tunnels } from './routes/tunnels.js';
+import { register as notebook } from './routes/notebook.js';
+import { register as vpn } from './routes/vpn.js';
 import { sessionUser } from './routes/auth.js';
 import { register as notify } from './routes/notify.js';
 import { register as report } from './routes/report.js';
+// PentAGI 集成（可迁移模块，见 server/src/pentagi/README.md）
+import { register as pentagi } from './pentagi/index.js';
 import { store } from './lib/store.js';
 import { encryptAll } from './lib/secure.js';
 
@@ -77,7 +84,7 @@ app.addHook('onRequest', (req, reply, done) => {
   return done();
 });
 
-for (const m of [hosts, docker, tools, agents, k8s, ai, devops, devopsCi, jenkins, buildTools, monitoring, ops, linux, code, kb, problems, sec, files, auth, admin, websites, firewall, backup, weblog, database, targets, seclab, tasksApi, ansible, notify, report]) await app.register(m, { prefix: '/api' });
+for (const m of [hosts, docker, tools, agents, k8s, ai, devops, devopsCi, jenkins, buildTools, monitoring, ops, linux, code, kb, problems, sec, files, auth, admin, websites, firewall, backup, weblog, database, targets, seclab, tasksApi, ansible, minio, vpn, net, tunnels, notebook, notify, report, pentagi]) await app.register(m, { prefix: '/api' });
 
 // 托管前端构建产物（存在则提供）
 const webDist = join(__dirname, '..', '..', 'web', 'dist');
