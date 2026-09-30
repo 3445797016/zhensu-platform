@@ -30,7 +30,7 @@ export const TOOLS: ToolDef[] = [
   // 数据
   { id: 'mysql', name: 'MySQL', category: 'data', port: 3306, systemd: ['mysql', 'mysqld'], install: 'sudo apt install mysql-server', ui: 'data' },
   { id: 'postgresql', name: 'PostgreSQL', category: 'data', port: 5432, systemd: ['postgresql'], install: 'sudo apt install postgresql', ui: 'data' },
-  { id: 'mongodb', name: 'MongoDB', category: 'data', port: 27017, systemd: ['mongod'], install: 'sudo apt install mongodb-org', ui: 'data' },
+  { id: 'mongodb', name: 'MongoDB', category: 'data', port: 27017, systemd: ['mongodb', 'mongod'], install: 'sudo apt install mongodb-org', ui: 'data' },
   { id: 'qdrant', name: 'Qdrant(向量库)', category: 'data', port: 6333, install: 'docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant', ui: 'dashboard', docs: '向量检索/相似度搜索,为 RAG/ML 准备' },
   { id: 'chroma', name: 'Chroma(向量库)', category: 'data', port: 8000, install: 'docker run -p 8000:8000 chromadb/chroma', ui: 'dashboard', docs: '轻量向量数据库,REST API 易接入' },
   { id: 'redis', name: 'Redis', category: 'cache', port: 6379, systemd: ['redis-server'], install: 'sudo apt install redis-server', ui: 'data' },
@@ -44,16 +44,16 @@ export const TOOLS: ToolDef[] = [
   // 网关/存储/其他
   { id: 'nginx', name: 'Nginx', category: 'gateway', port: 80, systemd: ['nginx'], install: 'sudo apt install nginx', ui: 'dashboard' },
   { id: 'minio', name: 'MinIO(对象存储)', category: 'storage', port: 9000, systemd: ['minio'], install: 'docker run -p 9000:9000 minio/minio server /data', ui: 'dashboard' },
-  { id: 'harbor', name: 'Harbor(镜像仓库)', category: 'storage', port: 80, install: '用 harbor 离线安装包安装', ui: 'dashboard' },
+  { id: 'harbor', name: 'Harbor(镜像仓库)', category: 'storage', port: 80, probeCmd: 'ss -tlnp 2>/dev/null | grep ":80 " | grep -qiF harbor || docker ps 2>/dev/null --format "{{.Names}}" | grep -qiF harbor', install: '用 harbor 离线安装包安装', ui: 'dashboard' },
   { id: 'portainer', name: 'Portainer', category: 'container', port: 9000, install: 'docker run -p 9000:9000 portainer/portainer', ui: 'dashboard' },
   { id: 'jenkins', name: 'Jenkins(CI)', category: 'devops', port: 8080, systemd: ['jenkins'], install: 'docker run -p 8080:8080 -p 50000:50000 jenkins/jenkins', ui: 'dashboard' },
-  { id: 'gitlab', name: 'GitLab', category: 'devops', port: 80, systemd: ['gitlab-runner'], install: 'docker run gitlab/gitlab-ce', ui: 'dashboard' },
+  { id: 'gitlab', name: 'GitLab', category: 'devops', port: 80, systemd: ['gitlab-runner'], probeCmd: 'docker ps 2>/dev/null --format "{{.Names}}" | grep -qiF gitlab', install: 'docker run gitlab/gitlab-ce', ui: 'dashboard' },
   { id: 'gitea', name: 'Gitea(本地仓库)', category: 'devops', port: 3000, install: 'docker run -p 3000:3000 -p 2222:22 gitea/gitea', ui: 'dashboard', docs: '轻量 Git 托管服务,本地代码仓库(HTTP/SSH)' },
   { id: 'sonarqube', name: 'SonarQube', category: 'devops', port: 9000, install: 'docker run sonarqube:lts-community', ui: 'dashboard' },
   { id: 'sonar-scanner', name: 'SonarScanner(扫描器)', category: 'devops', install: 'docker run sonarsource/sonar-scanner-cli', ui: 'none', docs: '代码静态分析扫描器,配合 SonarQube 使用' },
   { id: 'nexus', name: 'Nexus(制品仓库)', category: 'devops', port: 8081, install: 'docker run -p 8081:8081 sonatype/nexus3', ui: 'dashboard', docs: 'Maven/npm/Docker/raw 制品仓库' },
   // ===== 安全 / 渗透测试(靶场与演练, 镜像来自 Docker Hub) =====
-  { id: 'dvwa', name: 'DVWA 靶场', category: 'security', port: 80, install: 'docker run -p 80:80 vulnerables/web-dvwa (默认 admin/password)', ui: 'dashboard', docs: 'Web 漏洞演练:SQL注入/XSS/上传等' },
+  { id: 'dvwa', name: 'DVWA 靶场', category: 'security', port: 80, probeCmd: 'docker ps 2>/dev/null --format "{{.Names}}" | grep -qiF dvwa || ss -tlnp 2>/dev/null | grep ":80 " | grep -qiF "dvwa\|apache\|httpd"', install: 'docker run -p 80:80 vulnerables/web-dvwa (默认 admin/password)', ui: 'dashboard', docs: 'Web 漏洞演练:SQL注入/XSS/上传等' },
   { id: 'juice-shop', name: 'Juice Shop 靶场', category: 'security', port: 3000, install: 'docker run -p 3000:3000 bkimminich/juice-shop', ui: 'dashboard', docs: 'OWASP 现代 Web 漏洞靶场' },
   { id: 'webgoat', name: 'WebGoat 教学靶场', category: 'security', port: 8080, install: 'docker run -p 8080:8080 webgoat/webgoat-8.0', ui: 'dashboard', docs: 'OWASP 交互式安全教学靶场' },
   { id: 'zap', name: 'OWASP ZAP 代理', category: 'security', port: 8080, install: 'docker run -p 8080:8080 zaproxy/zap-stable', ui: 'dashboard', docs: 'Web 应用安全代理/主动扫描' },
@@ -64,24 +64,42 @@ export const TOOLS: ToolDef[] = [
 // 探测一台主机上某工具状态
 export async function probeTool(host: Host, tool: ToolDef): Promise<ToolStatus> {
   const probes: string[] = [];
-  if (tool.systemd?.length) probes.push(...tool.systemd.map((u) => `echo "svc:${u}="; systemctl is-active ${u} 2>/dev/null || echo inactive`));
-  if (tool.port) probes.push(`echo "port:${tool.port}="; ss -ltn 2>/dev/null | awk '{print $4}' | grep -qE '[:.]${tool.port}$' && echo LISTEN || echo closed`);
+  if (tool.systemd?.length) probes.push(...tool.systemd.map((u) => `echo "svc:${u}=\$(systemctl is-active ${u} 2>/dev/null || echo inactive)"`));
+  if (tool.port) {
+    // 获取端口监听状态和进程名（ss -p 可能需 root, 但尽力而为）
+    probes.push(`echo "port:${tool.port}=\$(ss -tlnp 2>/dev/null | awk -v port=":${tool.port} " 'index(\$0,port){split(\$NF,a,\"\\"\"); print "LISTEN proc="a[2]; exit}' || echo closed)"`);
+  }
+  if (tool.probeCmd) {
+    probes.push(`echo "probe:"; ${tool.probeCmd} 2>/dev/null || echo none`);
+  }
   probes.push(`echo "docker:"; docker ps --format '{{.Names}} {{.Image}} {{.Status}}' 2>/dev/null | grep -iE '${tool.name.split(' ')[0].toLowerCase()}|${tool.id}' | head -5 || echo none`);
   const cmd = probes.join('\n');
   const r = await run(host, cmd, 25000);
   const out = r.stdout;
   const parse = (prefix: string) => { const m = out.match(new RegExp(`${prefix}[:=]([^\\n\\r]*)`)); return m ? m[1].trim() : null; };
   const svc = tool.systemd?.map((u) => parse(`svc:${u}`)).find((s) => s && s !== 'inactive') || null;
-  const port = parse(`port:${tool.port}`) === 'LISTEN';
+  const portRaw = parse(`port:${tool.port}`);
+  const port = portRaw ? !/closed/i.test(portRaw) : false;
+  const procName = portRaw ? (portRaw.match(/proc=([^\s]+)/)?.[1] || null) : null;
+  const hasProbe = tool.probeCmd ? !/^none$/.test(parse('probe') || 'none') : false;
   const hasDocker = /docker:/.test(out) && !/docker:\s*(none|$)/.test(out);
   const dp = out.match(/docker:\s*([\s\S]*?)(?=\nsvc:|$)/);
+  // 判定逻辑:
+  // - 有 systemd 服务 → 可靠
+  // - 有 Docker 容器 → 可靠
+  // - 有 probeCmd 且成功 → 可靠
+  // - 纯端口监听（无 systemd、无 Docker）→ 仅当进程名匹配工具 id 时才认定
+  const portConfirmed = port && (!procName || procName.toLowerCase().includes(tool.id.toLowerCase()));
+  const detected = !!(svc || hasDocker || hasProbe || (port && procName === null) || portConfirmed);
+  const running = (svc === 'active') || hasDocker || hasProbe || portConfirmed || (port && procName === null);
   const status: ToolStatus = {
     id: tool.id,
     name: tool.name,
-    detected: !!(svc || port || hasDocker),
-    running: svc === 'active' || port || hasDocker,
+    detected,
+    running,
     service: svc,
     portOpen: port,
+    procName,
     docker: hasDocker ? (dp?.[1]?.trim() || true) : false,
     installHint: tool.install,
     raw: out,
@@ -96,6 +114,7 @@ export interface ToolStatus {
   running: boolean;
   service: string | null;
   portOpen: boolean;
+  procName: string | null;
   docker: string | boolean;
   installHint: string;
   raw: string;
