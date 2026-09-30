@@ -122,6 +122,14 @@ async function sendTo(ch: Channel, title: string, content: string) {
     case 'webhook': // 通用 Webhook: POST JSON {title, content, time, source}
       await post(ch.url || '', { title, content: content.slice(0, 3000), time: new Date().toISOString(), source: 'opshub' });
       break;
+    case 'telegram': {
+      if (!ch.password || !ch.user) throw new Error('Telegram 渠道需填写 Bot Token 和 Chat ID');
+      const botToken = dec(ch.password);
+      const chatId = ch.user;
+      const apiUrl = ch.url || 'https://api.telegram.org';
+      await post(`${apiUrl}/bot${botToken}/sendMessage`, { chat_id: chatId, text, parse_mode: 'Markdown' });
+      break;
+    }
     case 'email': {
       if (!ch.host || !ch.from || !ch.to) throw new Error('邮件渠道需填写 SMTP 服务器/发件人/收件人');
       await smtpSend(ch.host, ch.port || 587, ch.secure || 'starttls', ch.user || '', ch.password ? dec(ch.password) : '', ch.from, String(ch.to).split(/[,，;；\s]+/).filter(Boolean), title, content.slice(0, 4000));
@@ -145,7 +153,7 @@ export async function testChannel(ch: Channel, title = '测试通知', content =
 }
 
 export function newChannel(type: string): Channel {
-  const defs: any = { dingtalk: { name: '钉钉机器人', url: 'https://oapi.dingtalk.com/robot/send?access_token=xxx' }, feishu: { name: '飞书机器人', url: 'https://open.feishu.cn/open-apis/bot/v2/hook/xxx' }, serverchan: { name: 'Server酱', url: 'https://sctapi.ftqq.com/<SENDKEY>.send' }, webhook: { name: 'Webhook', url: 'https://example.com/hook' }, email: { name: '邮件(SMTP)', host: '', port: 587, secure: 'starttls', user: '', password: '', from: '', to: '' } };
+  const defs: any = { telegram: { name: 'Telegram Bot', url: 'https://api.telegram.org', user: '', password: '' }, dingtalk: { name: '钉钉机器人', url: 'https://oapi.dingtalk.com/robot/send?access_token=xxx' }, feishu: { name: '飞书机器人', url: 'https://open.feishu.cn/open-apis/bot/v2/hook/xxx' }, serverchan: { name: 'Server酱', url: 'https://sctapi.ftqq.com/<SENDKEY>.send' }, webhook: { name: 'Webhook', url: 'https://example.com/hook' }, email: { name: '邮件(SMTP)', host: '', port: 587, secure: 'starttls', user: '', password: '', from: '', to: '' } };
   const d = defs[type] || defs.webhook;
   return { id: randomUUID().slice(0, 8), type, name: d.name, url: d.url, host: d.host, port: d.port, secure: d.secure, user: d.user, password: d.password, from: d.from, to: d.to, enabled: false };
 }

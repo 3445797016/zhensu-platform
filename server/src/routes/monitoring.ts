@@ -90,7 +90,22 @@ export async function register(fastify: FastifyInstance) {
   fastify.delete('/monitor/events', () => { store.write(EV, []); return { ok: true }; });
 
   fastify.get('/monitor/alerts', () => store.list(AL).sort((a: any, b: any) => (b.time || '').localeCompare(a.time || '')));
-  fastify.post('/monitor/alerts/ack', (req) => { const { id } = req.body as any; store.upsert(AL, { ...(store.list(AL).find((a) => a.id === id) || {}), ack: true, ackTime: new Date().toISOString() }); return { ok: true }; });
+  // 标记已读：{ id } 单条 / { ids:[...] } 批量 / { all:true } 全部
+  fastify.post('/monitor/alerts/ack', (req) => {
+    const { id, ids, all } = (req.body || {}) as any;
+    const now = new Date().toISOString();
+    const list = store.list<any>(AL);
+    let count = 0;
+    if (all) {
+      for (const a of list) if (!a.ack) { a.ack = true; a.ackTime = now; count++; }
+    } else {
+      const target = new Set<string>([...(Array.isArray(ids) ? ids : []), ...(id ? [id] : [])]);
+      if (!target.size) return { ok: false, error: '缺少 id / ids / all' };
+      for (const a of list) if (target.has(a.id) && !a.ack) { a.ack = true; a.ackTime = now; count++; }
+    }
+    store.write(AL, list);
+    return { ok: true, count };
+  });
 
   // 外部服务健康(预留: 对接已装的 prometheus/blackbox)
   fastify.get('/monitor/services', () => store.list(SVC));
